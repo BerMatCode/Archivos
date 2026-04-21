@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Hello Kitty Yorchi</title>
+  <link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Dancing+Script:wght@700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: 'Dancing Script', cursive;
+      background: url('https://raw.githubusercontent.com/BerMatCode/Archivos/main/Multimedia/Hello%20kitty%20Fondo.jpg') center/cover no-repeat fixed;
+      height: 100vh; overflow: hidden; position: relative; color: white;
+      touch-action: manipulation;
+    }
+    body::before {
+      content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background: inherit; filter: blur(2px) brightness(0.9); z-index: -2;
+    }
+
+    /* === ☰ Menú === */
+    #menu-btn {
+      position: absolute; top: 15px; right: 15px; width: 40px; height: 40px;
+      display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 5px;
+      cursor: pointer; z-index: 1000; background: rgba(0,0,0,0.3); border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.2); backdrop-filter: blur(5px); transition: 0.3s;
+    }
+    #menu-btn:hover { background: rgba(255,20,147,0.4); }
+    #menu-btn span { width: 22px; height: 2px; background: #fff; border-radius: 2px; transition: 0.3s; }
+    #menu-btn.active span:nth-child(1) { transform: rotate(45deg) translate(5px, 5px); }
+    #menu-btn.active span:nth-child(2) { opacity: 0; }
+    #menu-btn.active span:nth-child(3) { transform: rotate(-45deg) translate(5px, -5px); }
+
+    #menu-panel {
+      position: fixed; top: 0; right: -300px; width: 260px; height: 100vh;
+      background: #ffffff; color: #333; padding: 70px 20px 20px; z-index: 999;
+      box-shadow: -5px 0 20px rgba(0,0,0,0.3); transition: right 0.3s cubic-bezier(0.4,0,0.2,1);
+      font-family: 'Roboto', sans-serif;
+    }
+    #menu-panel.active { right: 0; }
+    
+    #menu-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5); z-index: 998; display: none; transition: opacity 0.3s;
+    }
+    #menu-overlay.active { display: block; }
+
+    .menu-title {
+      font-size: 1.4rem; font-weight: 700; color: #ff1493;
+      border-bottom: 2px solid #ff69b4; padding-bottom: 12px; margin-bottom: 15px; text-align: center;
+    }
+    .menu-item {
+      font-size: 0.95rem; padding: 12px 15px; margin: 4px 0; border-radius: 8px;
+      background: #fff0f5; display: flex; align-items: center; gap: 10px;
+      color: #444; font-weight: 500; transition: 0.2s;
+    }
+    .menu-item:hover { background: #ffe6f2; transform: translateX(-5px); }
+    .menu-item i { color: #ff69b4; font-size: 1.1rem; width: 24px; text-align: center; }
+
+    /* === 🔋 Batería === */
+    #battery-indicator {
+      position: absolute; top: 15px; left: 15px; display: flex; align-items: center; gap: 6px;
+      background: rgba(0, 0, 0, 0.35); padding: 5px 10px; border-radius: 20px;
+      font-family: 'Roboto Mono', monospace; font-size: 0.75rem; z-index: 100;
+      border: 1px solid rgba(255, 255, 255, 0.15); pointer-events: none;
+    }
+    .battery-icon { position: relative; width: 18px; height: 10px; border: 1.5px solid #fff; border-radius: 2px; display: flex; align-items: center; padding: 1px; }
+    .battery-icon::after { content: ''; position: absolute; right: -3px; width: 2px; height: 4px; background: #fff; border-radius: 0 2px 2px 0; }
+    .battery-level { height: 100%; background: #4ade80; border-radius: 1px; transition: width 0.3s ease; }
+    .battery-level.low { background: #f87171; } .battery-level.medium { background: #fbbf24; }
+    .charging-icon { font-size: 0.8rem; color: #fbbf24; display: none; }
+    .charging-icon.active { display: inline-block; animation: pulse 0.6s infinite; }
+    @keyframes pulse { 0%,100%{transform:scale(1);} 50%{transform:scale(0.9);} }
+
+    /* === 💌 Mensaje === */
+    .message-box {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.45); backdrop-filter: blur(4px);
+      border-radius: 16px; padding: 18px 16px; text-align: center;
+      box-shadow: 0 0 15px rgba(255, 105, 180, 0.5); border: 1px solid rgba(255, 255, 255, 0.2);
+      z-index: 10; max-width: 85%; width: 80vw;
+    }
+    .title {
+      font-size: 2rem; font-weight: bold; margin-bottom: 10px;
+      text-shadow: 0 0 10px #ff69b4; color: #fff; font-family: 'Pacifico', cursive;
+      animation: glow 2s infinite alternate;
+    }
+    @keyframes glow { from { text-shadow: 0 0 5px #fff, 0 0 10px #ff69b4; } to { text-shadow: 0 0 15px #fff, 0 0 25px #ff69b4; } }
+    .message { font-size: 1.2rem; line-height: 1.5; color: #fff; text-shadow: 0 0 4px #000; }
+    
+    /* 🎂 Tarta en esquina */
+    .corner-cake {
+      position: absolute; top: -10px; right: -10px; width: 60px; height: auto; z-index: 11;
+      animation: bounce 2.2s ease-in-out infinite;
+    }
+    @keyframes bounce { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-5px);} }
+
+    /* === 👨‍🚀 Astronauta === */
+    #follower-astronaut {
+      position: absolute; width: 70px; height: auto; pointer-events: none; z-index: 15;
+      filter: drop-shadow(0 0 8px rgba(255, 105, 180, 0.8));
+    }
+    
+    /* === ✨ Chispas === */
+    .spark {
+      position: absolute; border-radius: 50%; pointer-events: none; z-index: 14;
+      background: radial-gradient(circle, #fff 0%, #ff69b4 40%, transparent 70%);
+      box-shadow: 0 0 6px #ff69b4; animation: sparkFade 0.7s ease-out forwards;
+    }
+    @keyframes sparkFade { 0%{transform:scale(1.2);opacity:1;} 100%{transform:scale(0);opacity:0;} }
+
+    /* === 🖼️ Imágenes Flotantes === */
+    .floating-img {
+      position: absolute; pointer-events: none; z-index: 2; opacity: 0;
+      animation: floatUp linear forwards;
+    }
+    @keyframes floatUp {
+      0% { transform: translateY(110vh) scale(0.8); opacity: 0; }
+      10% { opacity: 0.8; } 100% { transform: translateY(-20vh) scale(1); opacity: 0; }
+    }
+
+    /* === 𖤍 Créditos === */
+    .credits {
+      position: absolute; bottom: 70px; width: 100%; text-align: center;
+      font-family: 'Pacifico', cursive; font-size: 0.9rem; color: white;
+      text-shadow: 0 0 5px #ff66ff, 0 0 10px #ff66ff; z-index: 20; pointer-events: none;
+    }
+
+    @media (max-width: 768px) {
+      .message-box { padding: 14px 12px; }
+      .title { font-size: 1.6rem; } .message { font-size: 1rem; }
+      #follower-astronaut { width: 50px; } .corner-cake { width: 45px; }
+    }
+  </style>
+</head>
+<body>
+
+
+  <div id="menu-btn" onclick="toggleMenu()">
+    <span></span><span></span><span></span>
+  </div>
+  <div id="menu-overlay" onclick="toggleMenu()"></div>
+  <div id="menu-panel">
+    <div class="menu-title">💗Yorchi💗</div>
+    <div class="menu-item"><i class="fas fa-crown"></i> Mi Reina</div>
+    <div class="menu-item"><i class="fas fa-heart"></i> Mi Amor</div>
+    <div class="menu-item"><i class="fas fa-star"></i> Mi Todo</div>
+    <div class="menu-item"><i class="fas fa-moon"></i> Mi Golosita</div>
+    <div class="menu-item"><i class="fas fa-infinity"></i> Siempre Juntos</div>
+  </div>
+
+
+  <div id="battery-indicator">
+    <div class="battery-icon"><div class="battery-level high" id="battery-level"></div></div>
+    <span id="battery-percent">--%</span>
+    <i class="fas fa-bolt charging-icon" id="charging-icon"></i>
+  </div>
+
+  
+  <div class="message-box">
+    <div class="title">💘Mi Yorchi💖</div>
+    <div class="message">Te amo muchísimo mi bebé . No hay distancia ni tiempo que cambie lo que siento por ti, porque tú eres mi todo, mi goldita hermosa. Desde que llegaste a mi vida, todo es más bonito y especial.
+
+Siempre estás en mi mente y en mi corazón, y no importa lo lejos que estemos, lo nuestro es fuerte y sincero. Eres lo mejor que tengo.
+
+Te amo muchísimo mi amorsita💖</div>
+    <img src="https://i.postimg.cc/7P2vYZFL/1760657847691-removebg-preview.png" class="corner-cake" alt="Tarta">
+  </div>
+
+  
+  <div class="credits">𖤍 BerMat-Code 𖤍</div>
+
+
+  <img id="follower-astronaut" src="https://i.postimg.cc/vHFJ1dyW/1760657793625-removebg-preview.png" alt="Astronauta">
+
+  
+  <audio id="bg-music" preload="auto" loop></audio>
+  <audio id="click-sound" src="https://files.catbox.moe/deprpa.mp3" preload="auto"></audio>
+
+  <script>
+
+    window.addEventListener('load', () => {
+      initBattery();
+      startAstronaut();
+      startFloatingImages();
+    });
+
+    
+    const bg = document.getElementById('bg-music');
+    bg.src = 'https://raw.githubusercontent.com/BerMatMods/Hello-kitty/refs/heads/main/TikVid.io_7289423782995889414%20(1).mp3';
+    let audioReady = false;
+
+    async function playAudio() {
+      if (audioReady) return;
+      try {
+        await bg.load();
+        bg.volume = 0.6;
+        await bg.play();
+        audioReady = true;
+      } catch(e) { /* Navegador bloquea autoplay, se activa en el toque */ }
+    }
+
+    // Activar música al primer toque en pantalla
+    document.addEventListener('click', playAudio, { once: true, passive: true });
+    document.addEventListener('touchstart', playAudio, { once: true, passive: true });
+
+  
+    function toggleMenu() {
+      document.getElementById('menu-panel').classList.toggle('active');
+      document.getElementById('menu-btn').classList.toggle('active');
+      document.getElementById('menu-overlay').classList.toggle('active');
+    }
+
+    
+    async function initBattery() {
+      const l = document.getElementById('battery-level');
+      const p = document.getElementById('battery-percent');
+      const c = document.getElementById('charging-icon');
+      
+      const upd = (lvl, chg) => {
+        const pct = Math.round(lvl * 100);
+        p.textContent = pct + '%';
+        l.style.width = pct + '%';
+        l.className = 'battery-level ' + (pct <= 20 ? 'low' : pct <= 50 ? 'medium' : 'high');
+        c.classList.toggle('active', chg);
+        c.style.display = chg ? 'inline-block' : 'none';
+      };
+
+      if ('getBattery' in navigator) {
+        try {
+          const b = await navigator.getBattery();
+          upd(b.level, b.charging);
+          b.addEventListener('levelchange', () => upd(b.level, b.charging));
+          b.addEventListener('chargingchange', () => upd(b.level, b.charging));
+          return;
+        } catch(e) {}
+      }
+      upd(0.85, false);
+    }
+
+    function startFloatingImages() {
+      const src = "https://raw.githubusercontent.com/BerMatCode/Archivos/main/Multimedia/Hello_kitty_2.png";
+      setInterval(() => {
+        const img = document.createElement('img');
+        img.src = src; img.className = 'floating-img';
+        img.style.width = (25 + Math.random() * 35) + 'px';
+        img.style.left = (Math.random() * 90) + 'vw';
+        img.style.animationDuration = (5 + Math.random() * 5) + 's';
+        document.body.appendChild(img);
+        setTimeout(() => img.remove(), 11000);
+      }, 1200);
+    }
+
+    // === 👨‍🚀 ASTRONAUTA + CHISPAS ===
+    const astro = document.getElementById('follower-astronaut');
+    let ax=40, ay=60, tx=50, ty=50;
+    astro.style.left = ax+'vw'; astro.style.top = ay+'vh';
+    
+    function updatePos(e) {
+      const x = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : null);
+      const y = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : null);
+      if (x !== null) {
+        tx = (x / window.innerWidth) * 100;
+        ty = (y / window.innerHeight) * 100;
+      }
+    }
+    document.addEventListener('mousemove', updatePos, {passive:true});
+    document.addEventListener('touchmove', updatePos, {passive:true});
+
+    function spark(x, y, dx, dy) {
+      const s = document.createElement('div'); s.className='spark';
+      const sz = 3 + Math.random()*6;
+      s.style.cssText = `width:${sz}px;height:${sz}px;left:${x}px;top:${y}px`;
+      
+      const ang = Math.atan2(dy, dx) + Math.PI + (Math.random()-0.5)*1.5; 
+      const spd = 2 + Math.random()*4;
+      let px=x, py=y, op=1, life=25;
+      
+      (function anim(){
+        if(life-- <= 0 || op <= 0){ s.remove(); return; }
+        px += Math.cos(ang)*spd; py += Math.sin(ang)*spd; op -= 0.04;
+        s.style.left=px+'px'; s.style.top=py+'px'; s.style.opacity=op;
+        requestAnimationFrame(anim);
+      })();
+    }
+
+    let lastSpark = 0;
+    function startAstronaut() {
+      function loop() {
+        const dx = tx-ax, dy = ty-ay;
+        ax += dx*0.08; ay += dy*0.08;
+        astro.style.left = ax+'vw'; astro.style.top = ay+'vh';
+        
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        const now = performance.now();
+        
+        if(dist > 0.5 && now - lastSpark > 25) {
+          lastSpark = now;
+          const r = astro.getBoundingClientRect();
+          const cx = r.left + r.width/2, cy = r.top + r.height/2;
+          for(let i=0; i<5; i++) spark(cx, cy, dx, dy); 
+        }
+        requestAnimationFrame(loop);
+      }
+      loop();
+    }
+  </script>
+</body>
+</html>
