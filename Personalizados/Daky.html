@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Galaxia del Amor - BerMatMods</title>
+  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: #000;
+    }
+    canvas {
+      display: block;
+    }
+    #startScreen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(ellipse at center, #0a0a2a 0%, #000011 70%, #000 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+      transition: opacity 1s ease;
+    }
+    #startScreen.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    #startBtn {
+      padding: 20px 50px;
+      font-size: 24px;
+      font-family: 'Dancing Script', cursive;
+      background: linear-gradient(135deg, #00ffff, #7df9ff, #00bfff);
+      color: #000;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      box-shadow: 
+        0 0 20px #00ffff,
+        0 0 40px #00ffff,
+        0 0 60px #00bfff;
+      animation: pulse 2s infinite;
+      transition: transform 0.3s;
+    }
+    #startBtn:hover {
+      transform: scale(1.05);
+    }
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 20px #00ffff, 0 0 40px #00ffff, 0 0 60px #00bfff; }
+      50% { box-shadow: 0 0 30px #00ffff, 0 0 60px #00ffff, 0 0 90px #00bfff; }
+    }
+    #credits {
+      position: absolute;
+      bottom: 20px;
+      width: 100%;
+      text-align: center;
+      color: white;
+      font-family: 'Dancing Script', cursive;
+      font-size: 20px;
+      font-weight: bold;
+      text-shadow: 
+        0 0 10px #00ffff,
+        0 0 20px #00e5ff,
+        0 0 30px #00bfff;
+      pointer-events: none;
+      z-index: 10;
+    }
+  </style>
+</head>
+<body>
+  <div id="startScreen">
+    <button id="startBtn">✨ Toca aquí ✨</button>
+  </div>
+  <div id="credits">By: BerMat_Code</div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/FontLoader.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/geometries/TextGeometry.min.js"></script>
+
+  <script>
+    const audio = new Audio('https://github.com/BerMatMods/Music/raw/refs/heads/main/TikVid.io_7617716291998076168.mp3.m4a');
+    audio.loop = true;
+
+    let animationsStarted = false;
+
+    document.getElementById('startBtn').addEventListener('click', () => {
+      audio.play().catch(e => console.log('Audio play error:', e));
+      document.getElementById('startScreen').classList.add('hidden');
+      animationsStarted = true;
+    });
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
+    camera.position.z = 100;
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.minDistance = 10;
+    controls.maxDistance = 300;
+
+    const createCircleTexture = (colorHex) => {
+      const canvas = document.createElement('canvas');
+      const size = 64;
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      const gradient = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
+      gradient.addColorStop(0, colorHex);
+      gradient.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, size, size);
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.transparent = true;
+      return texture;
+    };
+
+    const galaxyParticleCount = 5000;
+    const galaxyGeometry = new THREE.BufferGeometry();
+    const galaxyPositions = new Float32Array(galaxyParticleCount * 3);
+    const galaxyColors = new Float32Array(galaxyParticleCount * 3);
+
+    const colors = [
+      new THREE.Color(0x7df9ff),
+      new THREE.Color(0x00ffff),
+      new THREE.Color(0x00bfff)
+    ];
+
+    for (let i = 0; i < galaxyParticleCount; i++) {
+      const radius = Math.sqrt(Math.random()) * 90;
+      const angle = Math.random() * Math.PI * 2;
+      const height = (Math.random() - 0.5) * 20;
+      galaxyPositions[i * 3] = Math.cos(angle) * radius;
+      galaxyPositions[i * 3 + 1] = height;
+      galaxyPositions[i * 3 + 2] = Math.sin(angle) * radius;
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      galaxyColors[i * 3] = color.r;
+      galaxyColors[i * 3 + 1] = color.g;
+      galaxyColors[i * 3 + 2] = color.b;
+    }
+
+    galaxyGeometry.setAttribute('position', new THREE.BufferAttribute(galaxyPositions, 3));
+    galaxyGeometry.setAttribute('color', new THREE.BufferAttribute(galaxyColors, 3));
+
+    const galaxyMaterial = new THREE.PointsMaterial({
+      size: 1.8,
+      map: createCircleTexture('#ffffff'),
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      vertexColors: true
+    });
+
+    scene.add(new THREE.Points(galaxyGeometry, galaxyMaterial));
+
+    const heartGroup = new THREE.Group();
+    scene.add(heartGroup);
+
+    const heartParticleCount = 1600;
+    const heartGeometry = new THREE.BufferGeometry();
+    const basePositions = new Float32Array(heartParticleCount * 3);
+    const offsets = new Float32Array(heartParticleCount);
+
+    function heartShape(t) {
+      return {
+        x: 16 * Math.pow(Math.sin(t), 3),
+        y: 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t)
+      };
+    }
+
+    for (let i = 0; i < heartParticleCount; i++) {
+      const t = (i / heartParticleCount) * Math.PI * 2;
+      const { x, y } = heartShape(t);
+      basePositions[i * 3] = x * 0.92;
+      basePositions[i * 3 + 1] = y * 0.92;
+      basePositions[i * 3 + 2] = (Math.random() - 0.5) * 4;
+      offsets[i] = Math.random() * Math.PI * 2;
+    }
+
+    const currentPositions = new Float32Array(basePositions);
+    heartGeometry.setAttribute('position', new THREE.BufferAttribute(currentPositions, 3));
+
+    const heartMaterial = new THREE.PointsMaterial({
+      size: 3.0,
+      map: createCircleTexture('#00ffff'),
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending
+    });
+
+    const heartPoints = new THREE.Points(heartGeometry, heartMaterial);
+    heartGroup.add(heartPoints);
+
+    const fontLoader = new THREE.FontLoader();
+    fontLoader.load('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/fonts/helvetiker_bold.typeface.json', (font) => {
+      const textGeo = new THREE.TextGeometry('Mi Dakito', {
+        font: font,
+        size: 2.9,
+        height: 1.4,
+        curveSegments: 12,
+        bevelEnabled: true,
+        bevelThickness: 0.12,
+        bevelSize: 0.06
+      });
+
+      textGeo.computeBoundingBox();
+      const centerX = -0.5 * (textGeo.boundingBox.max.x - textGeo.boundingBox.min.x);
+      const centerY = -0.5 * (textGeo.boundingBox.max.y - textGeo.boundingBox.min.y);
+      textGeo.translate(centerX, centerY, 0);
+
+      const textMaterial = new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        transparent: false
+      });
+
+      const textMesh = new THREE.Mesh(textGeo, textMaterial);
+      heartGroup.add(textMesh);
+    });
+
+    const romanticPhrases = [
+      "💙 Te amo 💙",
+      "🌹 Mi amor 🌹",
+      "👑 Mi rey 👑",
+      "❤️ Mi vida ❤️",
+      "✨ Corazón ✨",
+      "💫 Eres todo 💫",
+      "🌸 Siempre tú 🌸",
+      "💞 Amor eterno 💞",
+      "🌷 Mi sol 🌷",
+      "💌 Para siempre 💌",
+      "🌙 Mi estrella 🌙",
+      "🤍 Contigo 🤍",
+      "🔥 Mi todo 🔥",
+      "🕊️ Paz y amor 🕊️"
+    ];
+
+    const romanticSprites = [];
+    const phraseCount = 36;
+
+    for (let i = 0; i < phraseCount; i++) {
+      const phrase = romanticPhrases[Math.floor(Math.random() * romanticPhrases.length)];
+      
+      const canvas = document.createElement('canvas');
+      const size = 512;
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+
+      ctx.font = 'bold 42px Georgia, "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = 'white';
+      ctx.shadowColor = '#00ffff';
+      ctx.shadowBlur = 22;
+      ctx.fillText(phrase, size / 2, size / 2);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.transparent = true;
+      const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
+      const sprite = new THREE.Sprite(material);
+
+      const radius = 20 + Math.random() * 80;
+      const angle = Math.random() * Math.PI * 2;
+      const height = (Math.random() - 0.5) * 30;
+      sprite.position.set(
+        Math.cos(angle) * radius,
+        height,
+        Math.sin(angle) * radius
+      );
+      sprite.scale.set(18, 8, 1);
+      sprite.userData = { baseAngle: angle, radius, height, speed: 0.0005 + Math.random() * 0.001 };
+      scene.add(sprite);
+      romanticSprites.push(sprite);
+    }
+
+    const smallHearts = [];
+    const smallHeartCount = 14;
+
+    for (let h = 0; h < smallHeartCount; h++) {
+      const geo = new THREE.BufferGeometry();
+      const count = 120;
+      const pos = new Float32Array(count * 3);
+      const radius = 25 + Math.random() * 70;
+      const angle = Math.random() * Math.PI * 2;
+      const height = (Math.random() - 0.5) * 28;
+      const phase = Math.random() * Math.PI * 2;
+
+      for (let i = 0; i < count; i++) {
+        const t = (i / count) * Math.PI * 2;
+        const { x, y } = heartShape(t);
+        pos[i * 3] = Math.cos(angle) * radius + x * 0.22;
+        pos[i * 3 + 1] = height + y * 0.22;
+        pos[i * 3 + 2] = Math.sin(angle) * radius + (Math.random() - 0.5) * 1.8;
+      }
+
+      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      const mat = new THREE.PointsMaterial({
+        size: 1.4,
+        map: createCircleTexture('#00e5ff'),
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending
+      });
+      const smallHeart = new THREE.Points(geo, mat);
+      smallHeart.userData = { baseAngle: angle, radius, height, phase, speed: 0.001 + Math.random() * 0.002 };
+      scene.add(smallHeart);
+      smallHearts.push(smallHeart);
+    }
+
+    let time = 0;
+    let zoomDone = false;
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    const animate = () => {
+      requestAnimationFrame(animate);
+      const delta = 0.016;
+      time += delta;
+
+      if (animationsStarted) {
+        if (!zoomDone && time < 5) {
+          const t = Math.min(time / 5, 1);
+          const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+          camera.position.z = THREE.MathUtils.lerp(18, 150, ease * 0.88);
+          camera.lookAt(0, 0, 0);
+          controls.enabled = false;
+        } else {
+          zoomDone = true;
+          controls.enabled = true;
+        }
+
+        const beat = 1 + Math.sin(time * 2.1) * 0.09;
+        heartGroup.scale.setScalar(beat);
+        heartGroup.rotation.y += 0.003;
+
+        const positions = heartGeometry.attributes.position.array;
+        for (let i = 0; i < heartParticleCount; i++) {
+          const idx = i * 3;
+          const phase = offsets[i];
+          const noiseY = Math.sin(time * 2.4 + phase) * 1.0;
+          const noiseZ = Math.cos(time * 2.0 + phase) * 0.8;
+          positions[idx] = basePositions[idx] * beat;
+          positions[idx + 1] = (basePositions[idx + 1] + noiseY) * beat;
+          positions[idx + 2] = basePositions[idx + 2] + noiseZ;
+        }
+        heartGeometry.attributes.position.needsUpdate = true;
+
+        smallHearts.forEach(sh => {
+          const d = sh.userData;
+          const orbitAngle = d.baseAngle + time * d.speed;
+          const floatY = Math.sin(time * 0.7 + d.phase) * 2.2;
+          sh.position.set(
+            Math.cos(orbitAngle) * d.radius,
+            d.height + floatY,
+            Math.sin(orbitAngle) * d.radius
+          );
+          sh.rotation.y = time * 0.1;
+        });
+
+        romanticSprites.forEach(sp => {
+          const d = sp.userData;
+          const orbitAngle = d.baseAngle + time * d.speed;
+          const floatY = Math.sin(time * 0.5 + d.baseAngle) * 3;
+          sp.position.set(
+            Math.cos(orbitAngle) * d.radius,
+            d.height + floatY,
+            Math.sin(orbitAngle) * d.radius
+          );
+        });
+      }
+
+      controls.update();
+      renderer.render(scene, camera);
+    };
+
+    animate();
+  </script>
+</body>
+</html>
