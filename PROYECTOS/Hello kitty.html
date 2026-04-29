@@ -3,309 +3,482 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Hello Kitty Yorchi</title>
-  <link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Dancing+Script:wght@700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <title>🎀 Actualizar Hello Kitty Yorchi</title>
+  <link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Patrick+Hand&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     
     body {
-      font-family: 'Dancing Script', cursive;
-      background: url('https://raw.githubusercontent.com/BerMatCode/Archivos/main/Multimedia/Hello%20kitty%20Fondo.jpg') center/cover no-repeat fixed;
-      height: 100vh; overflow: hidden; position: relative; color: white;
-      touch-action: manipulation;
-    }
-    body::before {
-      content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-      background: inherit; filter: blur(2px) brightness(0.9); z-index: -2;
+      font-family: 'Patrick Hand', cursive;
+      background: linear-gradient(135deg, #fff0f5 0%, #fce7f3 50%, #fbcfe8 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      color: #4c1d95;
+      position: relative;
+      overflow-x: hidden;
     }
 
-    /* === ☰ Menú === */
-    #menu-btn {
-      position: absolute; top: 15px; right: 15px; width: 40px; height: 40px;
-      display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 5px;
-      cursor: pointer; z-index: 1000; background: rgba(0,0,0,0.3); border-radius: 8px;
-      border: 1px solid rgba(255,255,255,0.2); backdrop-filter: blur(5px); transition: 0.3s;
+    /* Fondo animado con corazones flotantes */
+    .bg-hearts {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
     }
-    #menu-btn:hover { background: rgba(255,20,147,0.4); }
-    #menu-btn span { width: 22px; height: 2px; background: #fff; border-radius: 2px; transition: 0.3s; }
-    #menu-btn.active span:nth-child(1) { transform: rotate(45deg) translate(5px, 5px); }
-    #menu-btn.active span:nth-child(2) { opacity: 0; }
-    #menu-btn.active span:nth-child(3) { transform: rotate(-45deg) translate(5px, -5px); }
-
-    #menu-panel {
-      position: fixed; top: 0; right: -300px; width: 260px; height: 100vh;
-      background: #ffffff; color: #333; padding: 70px 20px 20px; z-index: 999;
-      box-shadow: -5px 0 20px rgba(0,0,0,0.3); transition: right 0.3s cubic-bezier(0.4,0,0.2,1);
-      font-family: 'Roboto', sans-serif;
-    }
-    #menu-panel.active { right: 0; }
-    
-    #menu-overlay {
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.5); z-index: 998; display: none; transition: opacity 0.3s;
-    }
-    #menu-overlay.active { display: block; }
-
-    .menu-title {
-      font-size: 1.4rem; font-weight: 700; color: #ff1493;
-      border-bottom: 2px solid #ff69b4; padding-bottom: 12px; margin-bottom: 15px; text-align: center;
-    }
-    .menu-item {
-      font-size: 0.95rem; padding: 12px 15px; margin: 4px 0; border-radius: 8px;
-      background: #fff0f5; display: flex; align-items: center; gap: 10px;
-      color: #444; font-weight: 500; transition: 0.2s;
-    }
-    .menu-item:hover { background: #ffe6f2; transform: translateX(-5px); }
-    .menu-item i { color: #ff69b4; font-size: 1.1rem; width: 24px; text-align: center; }
-
-    /* === 🔋 Batería === */
-    #battery-indicator {
-      position: absolute; top: 15px; left: 15px; display: flex; align-items: center; gap: 6px;
-      background: rgba(0, 0, 0, 0.35); padding: 5px 10px; border-radius: 20px;
-      font-family: 'Roboto Mono', monospace; font-size: 0.75rem; z-index: 100;
-      border: 1px solid rgba(255, 255, 255, 0.15); pointer-events: none;
-    }
-    .battery-icon { position: relative; width: 18px; height: 10px; border: 1.5px solid #fff; border-radius: 2px; display: flex; align-items: center; padding: 1px; }
-    .battery-icon::after { content: ''; position: absolute; right: -3px; width: 2px; height: 4px; background: #fff; border-radius: 0 2px 2px 0; }
-    .battery-level { height: 100%; background: #4ade80; border-radius: 1px; transition: width 0.3s ease; }
-    .battery-level.low { background: #f87171; } .battery-level.medium { background: #fbbf24; }
-    .charging-icon { font-size: 0.8rem; color: #fbbf24; display: none; }
-    .charging-icon.active { display: inline-block; animation: pulse 0.6s infinite; }
-    @keyframes pulse { 0%,100%{transform:scale(1);} 50%{transform:scale(0.9);} }
-
-    /* === 💌 Mensaje === */
-    .message-box {
-      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      background: rgba(0, 0, 0, 0.45); backdrop-filter: blur(4px);
-      border-radius: 16px; padding: 18px 16px; text-align: center;
-      box-shadow: 0 0 15px rgba(255, 105, 180, 0.5); border: 1px solid rgba(255, 255, 255, 0.2);
-      z-index: 10; max-width: 85%; width: 80vw;
-    }
-    .title {
-      font-size: 2rem; font-weight: bold; margin-bottom: 10px;
-      text-shadow: 0 0 10px #ff69b4; color: #fff; font-family: 'Pacifico', cursive;
-      animation: glow 2s infinite alternate;
-    }
-    @keyframes glow { from { text-shadow: 0 0 5px #fff, 0 0 10px #ff69b4; } to { text-shadow: 0 0 15px #fff, 0 0 25px #ff69b4; } }
-    .message { font-size: 1.2rem; line-height: 1.5; color: #fff; text-shadow: 0 0 4px #000; }
-    
-    /* 🎂 Tarta en esquina */
-    .corner-cake {
-      position: absolute; top: -10px; right: -10px; width: 60px; height: auto; z-index: 11;
-      animation: bounce 2.2s ease-in-out infinite;
-    }
-    @keyframes bounce { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-5px);} }
-
-    /* === 👨‍🚀 Astronauta === */
-    #follower-astronaut {
-      position: absolute; width: 70px; height: auto; pointer-events: none; z-index: 15;
-      filter: drop-shadow(0 0 8px rgba(255, 105, 180, 0.8));
-    }
-    
-    /* === ✨ Chispas === */
-    .spark {
-      position: absolute; border-radius: 50%; pointer-events: none; z-index: 14;
-      background: radial-gradient(circle, #fff 0%, #ff69b4 40%, transparent 70%);
-      box-shadow: 0 0 6px #ff69b4; animation: sparkFade 0.7s ease-out forwards;
-    }
-    @keyframes sparkFade { 0%{transform:scale(1.2);opacity:1;} 100%{transform:scale(0);opacity:0;} }
-
-    /* === 🖼️ Imágenes Flotantes === */
-    .floating-img {
-      position: absolute; pointer-events: none; z-index: 2; opacity: 0;
-      animation: floatUp linear forwards;
+    .bg-heart {
+      position: absolute;
+      font-size: 1.5rem;
+      animation: floatUp 8s linear infinite;
+      opacity: 0.6;
     }
     @keyframes floatUp {
-      0% { transform: translateY(110vh) scale(0.8); opacity: 0; }
-      10% { opacity: 0.8; } 100% { transform: translateY(-20vh) scale(1); opacity: 0; }
+      0% { transform: translateY(110vh) rotate(0deg); opacity: 0; }
+      10% { opacity: 0.6; }
+      100% { transform: translateY(-20vh) rotate(360deg); opacity: 0; }
     }
 
-    /* === 𖤍 Créditos === */
-    .credits {
-      position: absolute; bottom: 70px; width: 100%; text-align: center;
-      font-family: 'Pacifico', cursive; font-size: 0.9rem; color: white;
-      text-shadow: 0 0 5px #ff66ff, 0 0 10px #ff66ff; z-index: 20; pointer-events: none;
+    .card {
+      background: white;
+      border-radius: 24px;
+      padding: 30px 25px;
+      max-width: 420px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(236, 72, 153, 0.3);
+      border: 3px solid #f9a8d4;
+      position: relative;
+      z-index: 10;
+      animation: cardPop 0.5s ease-out;
+    }
+    @keyframes cardPop {
+      0% { transform: scale(0.9); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
     }
 
-    @media (max-width: 768px) {
-      .message-box { padding: 14px 12px; }
-      .title { font-size: 1.6rem; } .message { font-size: 1rem; }
-      #follower-astronaut { width: 50px; } .corner-cake { width: 45px; }
+    .logo {
+      width: 100px;
+      height: 100px;
+      margin: 0 auto 20px;
+      background: linear-gradient(135deg, #f472b6, #ec4899);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+      box-shadow: 0 8px 25px rgba(236, 72, 153, 0.4);
+      animation: bounce 2s ease-in-out infinite;
+    }
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+
+    .app-name {
+      font-family: 'Pacifico', cursive;
+      font-size: 1.8rem;
+      color: #e11d48;
+      margin-bottom: 8px;
+      text-shadow: 0 2px 4px rgba(236, 72, 153, 0.2);
+    }
+
+    .version-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: linear-gradient(135deg, #a78bfa, #7c3aed);
+      color: white;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 15px;
+      box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+    }
+
+    .update-title {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #7c3aed;
+      margin: 15px 0 10px;
+    }
+
+    .update-desc {
+      font-size: 1rem;
+      color: #6b7280;
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+
+    .features {
+      text-align: left;
+      background: #faf5ff;
+      border-radius: 12px;
+      padding: 15px;
+      margin: 15px 0;
+      border: 1.5px dashed #d8b4fe;
+    }
+    .features h4 {
+      color: #7c3aed;
+      margin-bottom: 8px;
+      font-size: 1rem;
+    }
+    .features ul {
+      list-style: none;
+      padding-left: 5px;
+    }
+    .features li {
+      font-size: 0.95rem;
+      color: #4c1d95;
+      padding: 4px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .features li i {
+      color: #22c55e;
+      font-size: 0.9rem;
+    }
+
+    .apk-info {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      background: #fef3c7;
+      border-radius: 10px;
+      padding: 10px 15px;
+      margin: 15px 0;
+      border: 1.5px solid #fcd34d;
+    }
+    .apk-info i {
+      font-size: 1.3rem;
+      color: #b45309;
+    }
+    .apk-info span {
+      font-size: 0.9rem;
+      color: #92400e;
+      font-weight: 500;
+    }
+
+    .download-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      padding: 16px 20px;
+      background: linear-gradient(135deg, #ec4899, #e11d48);
+      color: white;
+      border: none;
+      border-radius: 16px;
+      font-family: 'Patrick Hand', cursive;
+      font-size: 1.2rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 8px 25px rgba(236, 72, 153, 0.4);
+      text-decoration: none;
+      margin: 10px 0;
+      position: relative;
+      overflow: hidden;
+    }
+    .download-btn::before {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%;
+      width: 100%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+      transition: left 0.5s ease;
+    }
+    .download-btn:hover::before { left: 100%; }
+    .download-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 35px rgba(236, 72, 153, 0.6);
+    }
+    .download-btn:active { transform: translateY(-1px); }
+
+    .auto-note {
+      font-size: 0.85rem;
+      color: #9ca3af;
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .auto-note i { color: #22c55e; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background: #e5e7eb;
+      border-radius: 10px;
+      margin: 15px 0;
+      overflow: hidden;
+      display: none;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #22c55e, #16a34a);
+      border-radius: 10px;
+      width: 0%;
+      transition: width 0.3s ease;
+      animation: progressAnim 2s ease-in-out infinite;
+    }
+    @keyframes progressAnim {
+      0%, 100% { width: 30%; }
+      50% { width: 70%; }
+    }
+
+    .status-text {
+      font-size: 0.95rem;
+      color: #4c1d95;
+      font-weight: 500;
+      min-height: 24px;
+      margin: 5px 0;
+    }
+
+    .footer {
+      margin-top: 25px;
+      padding-top: 15px;
+      border-top: 1px dashed #f9a8d4;
+      font-size: 0.9rem;
+      color: #9ca3af;
+    }
+    .footer a {
+      color: #ec4899;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .security-note {
+      background: #dbeafe;
+      border: 1.5px solid #93c5fd;
+      border-radius: 10px;
+      padding: 12px;
+      margin: 15px 0;
+      font-size: 0.9rem;
+      color: #1e40af;
+      text-align: left;
+    }
+    .security-note i { color: #3b82f6; margin-right: 5px; }
+
+    /* Animación de confeti al hacer click */
+    .confetti {
+      position: fixed;
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      pointer-events: none;
+      animation: confettiFall 3s ease-out forwards;
+      z-index: 100;
+    }
+    @keyframes confettiFall {
+      0% { transform: translateY(-10px) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+    }
+
+    @media (max-width: 480px) {
+      .card { padding: 25px 20px; }
+      .app-name { font-size: 1.6rem; }
+      .logo { width: 85px; height: 85px; font-size: 2.5rem; }
+      .download-btn { font-size: 1.1rem; padding: 14px 18px; }
     }
   </style>
 </head>
 <body>
 
+  <!-- Corazones de fondo -->
+  <div class="bg-hearts" id="bgHearts"></div>
 
-  <div id="menu-btn" onclick="toggleMenu()">
-    <span></span><span></span><span></span>
+  <div class="card">
+    <div class="logo">🎀</div>
+    
+    <h1 class="app-name">Hello Kitty Yorchi</h1>
+    <div class="version-badge">
+      <i class="fas fa-sparkles"></i> Versión 2.0 • Actualización
+    </div>
+
+    <h2 class="update-title">✨ ¡Nueva versión disponible!</h2>
+    <p class="update-desc">
+      Hemos mejorado tu experiencia con nuevas funciones y correcciones para que todo sea más especial 💖
+    </p>
+
+    <div class="features">
+      <h4><i class="fas fa-list-check"></i> Novedades:</h4>
+      <ul>
+        <li><i class="fas fa-check-circle"></i> Partículas más suaves y optimizadas</li>
+        <li><i class="fas fa-check-circle"></i> Menú hamburguesa restaurado</li>
+        <li><i class="fas fa-check-circle"></i> Optimizado</li>
+        <li><i class="fas fa-check-circle"></i> Sin retrasos</li>
+        <li><i class="fas fa-check-circle"></i> Correcciones de rendimiento</li>
+      </ul>
+    </div>
+
+    <div class="apk-info">
+      <i class="fas fa-file-arrow-down"></i>
+      <span>Hello-kitty_Yorchi(2).apk • ~12 MB</span>
+    </div>
+
+    <div class="security-note">
+      <i class="fas fa-shield-halved"></i>
+      <strong>Descarga segura:</strong> Archivo verificado desde MediaFire. Sin publicidad invasiva.
+    </div>
+
+    <button class="download-btn" id="downloadBtn" onclick="startDownload()">
+      <i class="fas fa-cloud-arrow-down"></i>
+      <span id="btnText">Descargar Ahora</span>
+    </button>
+
+    <div class="progress-bar" id="progressBar">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+    <div class="status-text" id="statusText"></div>
+
+    <p class="auto-note">
+      <i class="fas fa-bolt"></i>
+      La descarga se abrirá en una nueva pestaña
+    </p>
+
+    <div class="footer">
+      <p>𖤍 BerMat-Code 𖤍</p>
+      <p style="margin-top:5px">
+        <a href="https://wa.me/" target="_blank">
+          <i class="fab fa-whatsapp"></i> Soporte
+        </a> • 
+        <a href="#" onclick="showInstructions()">
+          <i class="fas fa-circle-question"></i> ¿Cómo instalar?
+        </a>
+      </p>
+    </div>
   </div>
-  <div id="menu-overlay" onclick="toggleMenu()"></div>
-  <div id="menu-panel">
-    <div class="menu-title">💗Yorchi💗</div>
-    <div class="menu-item"><i class="fas fa-crown"></i> Mi Reina</div>
-    <div class="menu-item"><i class="fas fa-heart"></i> Mi Amor</div>
-    <div class="menu-item"><i class="fas fa-star"></i> Mi Todo</div>
-    <div class="menu-item"><i class="fas fa-moon"></i> Mi Golosita</div>
-    <div class="menu-item"><i class="fas fa-infinity"></i> Siempre Juntos</div>
-  </div>
-
-
-  <div id="battery-indicator">
-    <div class="battery-icon"><div class="battery-level high" id="battery-level"></div></div>
-    <span id="battery-percent">--%</span>
-    <i class="fas fa-bolt charging-icon" id="charging-icon"></i>
-  </div>
-
-  
-  <div class="message-box">
-    <div class="title">💘Mi Yorchi💖</div>
-    <div class="message">Te amo muchísimo mi bebé . No hay distancia ni tiempo que cambie lo que siento por ti, porque tú eres mi todo, mi goldita hermosa. Desde que llegaste a mi vida, todo es más bonito y especial.
-
-Siempre estás en mi mente y en mi corazón, y no importa lo lejos que estemos, lo nuestro es fuerte y sincero. Eres lo mejor que tengo.
-
-Te amo muchísimo mi amorsita💖</div>
-    <img src="https://i.postimg.cc/7P2vYZFL/1760657847691-removebg-preview.png" class="corner-cake" alt="Tarta">
-  </div>
-
-  
-  <div class="credits">𖤍 BerMat-Code 𖤍</div>
-
-
-  <img id="follower-astronaut" src="https://i.postimg.cc/vHFJ1dyW/1760657793625-removebg-preview.png" alt="Astronauta">
-
-  
-  <audio id="bg-music" preload="auto" loop></audio>
-  <audio id="click-sound" src="https://files.catbox.moe/deprpa.mp3" preload="auto"></audio>
 
   <script>
+    // Configuración
+    const DOWNLOAD_URL = 'https://www.mediafire.com/file/2vi2vs3iq7vuccj/Hello-kitty_Yorchi%282%29.apk/file';
+    const APP_NAME = 'Hello Kitty Yorchi';
+    const FILE_SIZE = '12 MB';
 
+    // Crear corazones de fondo
+    function createBgHearts() {
+      const container = document.getElementById('bgHearts');
+      const hearts = ['💖', '💗', '💕', '✨', '🎀', '🌸'];
+      for (let i = 0; i < 15; i++) {
+        const h = document.createElement('div');
+        h.className = 'bg-heart';
+        h.textContent = hearts[Math.floor(Math.random() * hearts.length)];
+        h.style.left = Math.random() * 100 + 'vw';
+        h.style.animationDelay = Math.random() * 8 + 's';
+        h.style.animationDuration = (6 + Math.random() * 4) + 's';
+        container.appendChild(h);
+      }
+    }
+
+    // Efecto confeti al descargar
+    function createConfetti(x, y) {
+      const colors = ['#ec4899', '#f472b6', '#a78bfa', '#22c55e', '#fbbf24'];
+      for (let i = 0; i < 20; i++) {
+        const c = document.createElement('div');
+        c.className = 'confetti';
+        c.style.left = (x + (Math.random() - 0.5) * 100) + 'px';
+        c.style.top = y + 'px';
+        c.style.background = colors[Math.floor(Math.random() * colors.length)];
+        c.style.animationDelay = Math.random() * 0.5 + 's';
+        document.body.appendChild(c);
+        setTimeout(() => c.remove(), 3000);
+      }
+    }
+
+    // Iniciar descarga
+    function startDownload() {
+      const btn = document.getElementById('downloadBtn');
+      const btnText = document.getElementById('btnText');
+      const progressBar = document.getElementById('progressBar');
+      const statusText = document.getElementById('statusText');
+
+      // Efecto visual
+      btn.disabled = true;
+      btnText.textContent = 'Preparando...';
+      progressBar.style.display = 'block';
+      
+      // Simular progreso
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += Math.random() * 15;
+        if (progress >= 100) {
+          progress = 100;
+          clearInterval(interval);
+        }
+        document.getElementById('progressFill').style.width = progress + '%';
+      }, 200);
+
+      // Mensaje de estado
+      statusText.textContent = '🔗 Redirigiendo a MediaFire...';
+
+      // Abrir descarga después de 1.5s (para mostrar animación)
+      setTimeout(() => {
+        // Efecto confeti
+        const rect = btn.getBoundingClientRect();
+        createConfetti(rect.left + rect.width/2, rect.top + rect.height/2);
+
+        // Abrir MediaFire en nueva pestaña
+        window.open(DOWNLOAD_URL, '_blank');
+        
+        // Actualizar UI
+        btnText.innerHTML = '<i class="fas fa-check"></i> ¡Listo!';
+        statusText.innerHTML = '✅ Si la descarga no inicia, <strong>revisa la nueva pestaña</strong> o toca el botón nuevamente.';
+        statusText.style.color = '#16a34a';
+        
+        // Resetear botón después de 5s
+        setTimeout(() => {
+          btn.disabled = false;
+          btnText.textContent = 'Descargar Ahora';
+          progressBar.style.display = 'none';
+          document.getElementById('progressFill').style.width = '0%';
+          statusText.textContent = '';
+        }, 5000);
+      }, 1500);
+    }
+
+    // Mostrar instrucciones de instalación
+    function showInstructions() {
+      alert(`📱 Cómo instalar ${APP_NAME}:
+
+1️⃣ Toca "Descargar Ahora"
+2️⃣ Espera que termine la descarga (~${FILE_SIZE})
+3️⃣ Abre el archivo descargado (.apk)
+4️⃣ Si aparece una advertencia:
+   • Ve a "Ajustes" → "Seguridad"
+   • Activa "Orígenes desconocidos"
+   • Regresa e instala normalmente
+5️⃣ ¡Disfruta tu nueva versión! 💖
+
+⚠️ Nota: Esta app es para uso personal y no está disponible en Play Store.`);
+    }
+
+    // Auto-iniciar corazones al cargar
     window.addEventListener('load', () => {
-      initBattery();
-      startAstronaut();
-      startFloatingImages();
+      createBgHearts();
+      
+      // Efecto suave de entrada para la tarjeta
+      document.querySelector('.card').style.opacity = '0';
+      document.querySelector('.card').style.transform = 'translateY(20px)';
+      setTimeout(() => {
+        document.querySelector('.card').style.transition = 'all 0.5s ease';
+        document.querySelector('.card').style.opacity = '1';
+        document.querySelector('.card').style.transform = 'translateY(0)';
+      }, 100);
     });
 
-    
-    const bg = document.getElementById('bg-music');
-    bg.src = 'https://raw.githubusercontent.com/BerMatMods/Hello-kitty/refs/heads/main/TikVid.io_7289423782995889414%20(1).mp3';
-    let audioReady = false;
-
-    async function playAudio() {
-      if (audioReady) return;
-      try {
-        await bg.load();
-        bg.volume = 0.6;
-        await bg.play();
-        audioReady = true;
-      } catch(e) { /* Navegador bloquea autoplay, se activa en el toque */ }
-    }
-
-    // Activar música al primer toque en pantalla
-    document.addEventListener('click', playAudio, { once: true, passive: true });
-    document.addEventListener('touchstart', playAudio, { once: true, passive: true });
-
-  
-    function toggleMenu() {
-      document.getElementById('menu-panel').classList.toggle('active');
-      document.getElementById('menu-btn').classList.toggle('active');
-      document.getElementById('menu-overlay').classList.toggle('active');
-    }
-
-    
-    async function initBattery() {
-      const l = document.getElementById('battery-level');
-      const p = document.getElementById('battery-percent');
-      const c = document.getElementById('charging-icon');
-      
-      const upd = (lvl, chg) => {
-        const pct = Math.round(lvl * 100);
-        p.textContent = pct + '%';
-        l.style.width = pct + '%';
-        l.className = 'battery-level ' + (pct <= 20 ? 'low' : pct <= 50 ? 'medium' : 'high');
-        c.classList.toggle('active', chg);
-        c.style.display = chg ? 'inline-block' : 'none';
-      };
-
-      if ('getBattery' in navigator) {
-        try {
-          const b = await navigator.getBattery();
-          upd(b.level, b.charging);
-          b.addEventListener('levelchange', () => upd(b.level, b.charging));
-          b.addEventListener('chargingchange', () => upd(b.level, b.charging));
-          return;
-        } catch(e) {}
-      }
-      upd(0.85, false);
-    }
-
-    function startFloatingImages() {
-      const src = "https://raw.githubusercontent.com/BerMatCode/Archivos/main/Multimedia/Hello_kitty_2.png";
-      setInterval(() => {
-        const img = document.createElement('img');
-        img.src = src; img.className = 'floating-img';
-        img.style.width = (25 + Math.random() * 35) + 'px';
-        img.style.left = (Math.random() * 90) + 'vw';
-        img.style.animationDuration = (5 + Math.random() * 5) + 's';
-        document.body.appendChild(img);
-        setTimeout(() => img.remove(), 11000);
-      }, 1200);
-    }
-
-    // === 👨‍🚀 ASTRONAUTA + CHISPAS ===
-    const astro = document.getElementById('follower-astronaut');
-    let ax=40, ay=60, tx=50, ty=50;
-    astro.style.left = ax+'vw'; astro.style.top = ay+'vh';
-    
-    function updatePos(e) {
-      const x = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : null);
-      const y = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : null);
-      if (x !== null) {
-        tx = (x / window.innerWidth) * 100;
-        ty = (y / window.innerHeight) * 100;
-      }
-    }
-    document.addEventListener('mousemove', updatePos, {passive:true});
-    document.addEventListener('touchmove', updatePos, {passive:true});
-
-    function spark(x, y, dx, dy) {
-      const s = document.createElement('div'); s.className='spark';
-      const sz = 3 + Math.random()*6;
-      s.style.cssText = `width:${sz}px;height:${sz}px;left:${x}px;top:${y}px`;
-      
-      const ang = Math.atan2(dy, dx) + Math.PI + (Math.random()-0.5)*1.5; 
-      const spd = 2 + Math.random()*4;
-      let px=x, py=y, op=1, life=25;
-      
-      (function anim(){
-        if(life-- <= 0 || op <= 0){ s.remove(); return; }
-        px += Math.cos(ang)*spd; py += Math.sin(ang)*spd; op -= 0.04;
-        s.style.left=px+'px'; s.style.top=py+'px'; s.style.opacity=op;
-        requestAnimationFrame(anim);
-      })();
-    }
-
-    let lastSpark = 0;
-    function startAstronaut() {
-      function loop() {
-        const dx = tx-ax, dy = ty-ay;
-        ax += dx*0.08; ay += dy*0.08;
-        astro.style.left = ax+'vw'; astro.style.top = ay+'vh';
-        
-        const dist = Math.sqrt(dx*dx + dy*dy);
-        const now = performance.now();
-        
-        if(dist > 0.5 && now - lastSpark > 25) {
-          lastSpark = now;
-          const r = astro.getBoundingClientRect();
-          const cx = r.left + r.width/2, cy = r.top + r.height/2;
-          for(let i=0; i<5; i++) spark(cx, cy, dx, dy); 
-        }
-        requestAnimationFrame(loop);
-      }
-      loop();
-    }
+    // Prevenir scroll en móviles para experiencia app-like
+    document.addEventListener('touchmove', (e) => {
+      if (!e.target.closest('.card')) e.preventDefault();
+    }, { passive: false });
   </script>
 </body>
 </html>
