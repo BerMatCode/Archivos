@@ -3,401 +3,262 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- Esto hace que la barra de Chrome en celular sea celeste -->
-  <meta name="theme-color" content="#B0E0E6">
-  <meta name="msapplication-navbutton-color" content="#B0E0E6">
-  <meta name="apple-mobile-web-app-status-bar-style" content="#B0E0E6">
-  <title>Reflexión sobre la Confianza</title>
-  
-  <!-- Fuentes: Patrick Hand para títulos/créditos y Nunito para el texto grueso -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
-  
+  <!-- Color de la barra de navegación en Chrome/móviles -->
+  <meta name="theme-color" content="#00ff41">
+  <meta name="description" content="Error 404 - De BerMatCode">
+  <title>404 | De BerMatCode</title>
   <style>
     :root {
-      --bg-primary: #B0E0E6;
-      --bg-secondary: #E0F7FA;
-      --bg-card: rgba(255, 255, 255, 0.9);
-      --text-primary: #1A2A3A;
-      --text-secondary: #2C3E50;
-      --accent: #0097A7;
-      
-      /* Colores de resaltado por tipo */
-      --highlight-lie: #D32F2F;        /* Rojo: mentiras */
-      --highlight-denied: #7B1FA2;     /* Morado: negaciones */
-      --highlight-important: #FF8F00;  /* Naranja: puntos clave */
-      --highlight-boundary: #0288D1;   /* Azul: límites/respeto */
-      
-      --shadow: rgba(0, 0, 0, 0.15);
+      --matrix: #00ff41;
+      --matrix-dim: #008f11;
+      --bg: #050505;
+      --text: #e0e0e0;
+      --glass: rgba(8, 12, 8, 0.85);
     }
 
-    * { 
-      box-sizing: border-box; 
-      margin: 0; 
-      padding: 0; 
-      scroll-behavior: smooth;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
-      background: linear-gradient(160deg, #B0E0E6 0%, #E0F7FA 50%, #81D4FA 100%);
-      background-attachment: fixed;
-      color: var(--text-primary);
-      font-family: 'Nunito', sans-serif;
-      font-size: 0.95rem;
-      font-weight: 600; 
-      line-height: 1.7;
-      min-height: 100vh;
-      overflow-x: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
-    /* Animaciones */
+    /* Canvas Matrix */
+    #matrix {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0.22;
+    }
+
+    /* Efecto Scanlines CRT */
+    .scanlines {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.15) 0px,
+        rgba(0, 0, 0, 0.15) 1px,
+        transparent 1px,
+        transparent 2px
+      );
+      pointer-events: none;
+      z-index: 2;
+      opacity: 0.6;
+    }
+
+    /* Contenedor principal */
+    .container {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      padding: 3rem 2.5rem;
+      background: var(--glass);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(0, 255, 65, 0.2);
+      border-radius: 16px;
+      max-width: 540px;
+      width: 90%;
+      box-shadow: 0 0 30px rgba(0, 255, 65, 0.05);
+      animation: float 6s ease-in-out infinite, borderPulse 4s ease-in-out infinite;
+    }
+
     @keyframes float {
       0%, 100% { transform: translateY(0px); }
-      50% { transform: translateY(-15px); }
+      50% { transform: translateY(-8px); }
     }
 
-    @keyframes fadeInUp {
-      from {
-        opacity: 0;
-        transform: translateY(40px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
+    @keyframes borderPulse {
+      0%, 100% { box-shadow: 0 0 20px rgba(0, 255, 65, 0.05); border-color: rgba(0, 255, 65, 0.2); }
+      50% { box-shadow: 0 0 35px rgba(0, 255, 65, 0.15); border-color: rgba(0, 255, 65, 0.4); }
     }
 
-    header {
-      text-align: center;
-      padding: 2.5rem 1rem;
-      animation: fadeInUp 0.8s ease-out;
-    }
-
-    header h1 {
-      font-family: 'Patrick Hand', cursive;
-      font-size: 3rem;
-      color: var(--text-primary);
+    /* Glitch 404 */
+    .glitch {
+      font-size: clamp(5rem, 14vw, 9.5rem);
+      font-weight: 900;
+      color: var(--matrix);
+      position: relative;
+      text-shadow: 0 0 15px rgba(0, 255, 65, 0.7);
+      letter-spacing: -4px;
+      line-height: 1;
       margin-bottom: 0.5rem;
-      animation: float 5s ease-in-out infinite;
-      font-weight: 800;
     }
 
-    header p {
-      font-size: 1.1rem;
-      font-weight: 700;
-      color: var(--text-secondary);
-      opacity: 0.9;
+    .glitch::before, .glitch::after {
+      content: attr(data-text);
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
     }
 
-    .container {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 1rem;
+    .glitch::before {
+      color: #ff00ff;
+      animation: glitch-1 2s infinite linear alternate-reverse;
+      clip-path: polygon(0 0, 100% 0, 100% 33%, 0 33%);
     }
 
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 1.5rem;
-      margin-bottom: 3rem;
+    .glitch::after {
+      color: #00ffff;
+      animation: glitch-2 3s infinite linear alternate-reverse;
+      clip-path: polygon(0 67%, 100% 67%, 100% 100%, 0 100%);
     }
 
-    .card {
-      background: var(--bg-card);
-      backdrop-filter: blur(12px);
-      border: 2px solid rgba(255, 255, 255, 0.8);
-      border-radius: 18px;
-      padding: 1.5rem;
-      box-shadow: 0 8px 25px var(--shadow);
-      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    @keyframes glitch-1 {
+      0% { transform: translate(0); }
+      20% { transform: translate(-3px, 2px); }
+      40% { transform: translate(3px, -1px); }
+      60% { transform: translate(-2px, -2px); }
+      80% { transform: translate(2px, 3px); }
+      100% { transform: translate(0); }
+    }
+
+    @keyframes glitch-2 {
+      0% { transform: translate(0); }
+      20% { transform: translate(3px, -2px); }
+      40% { transform: translate(-2px, 1px); }
+      60% { transform: translate(2px, 2px); }
+      80% { transform: translate(-3px, -1px); }
+      100% { transform: translate(0); }
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 500;
+      margin-bottom: 1.2rem;
+      color: #fff;
       opacity: 0;
-      transform: translateY(40px);
-      animation: fadeInUp 0.8s ease-out forwards;
+      animation: fadeIn 0.8s ease-out 0.5s forwards;
     }
 
-    .card:nth-child(1) { animation-delay: 0.1s; }
-    .card:nth-child(2) { animation-delay: 0.2s; }
-    .card:nth-child(3) { animation-delay: 0.3s; }
-    .card:nth-child(4) { animation-delay: 0.4s; }
-    .card:nth-child(5) { animation-delay: 0.5s; }
-    .card:nth-child(6) { animation-delay: 0.6s; }
-    .card:nth-child(7) { animation-delay: 0.7s; }
-    .card:nth-child(8) { animation-delay: 0.8s; }
-    .card:nth-child(9) { animation-delay: 0.9s; }
-
-    .card:hover {
-      transform: translateY(-8px) scale(1.01);
-      box-shadow: 0 12px 35px rgba(0, 151, 167, 0.25);
-      border-color: var(--accent);
+    /* Typewriter con cursor */
+    .typewriter {
+      font-size: 1rem;
+      line-height: 1.7;
+      color: #a0a0a0;
+      min-height: 3.4em;
+      margin-bottom: 0.5rem;
+      opacity: 0;
+      animation: fadeIn 0.5s ease-out 1s forwards;
     }
-
-    .card h2 {
-      font-family: 'Patrick Hand', cursive;
-      font-size: 1.8rem;
-      color: var(--accent);
-      margin-bottom: 0.8rem;
-      padding-bottom: 0.5rem;
-      border-bottom: 2px dashed rgba(0, 151, 167, 0.4);
-      font-weight: 800;
-    }
-
-    .card p { 
-      margin-bottom: 0.8rem;
-      color: var(--text-secondary);
-      font-weight: 600;
-    }
-
-    /* Estilos de resaltado por tipo - sin leyenda visual */
-    .highlight-lie {
-      text-decoration: underline;
-      text-decoration-color: var(--highlight-lie);
-      text-underline-offset: 3px;
-      text-decoration-thickness: 2px;
-      font-weight: 800;
-      color: var(--text-primary);
-      background: rgba(211, 47, 47, 0.12);
-      padding: 0 5px;
-      border-radius: 4px;
-      transition: all 0.3s ease;
-    }
-    
-    .highlight-denied {
-      text-decoration: underline;
-      text-decoration-color: var(--highlight-denied);
-      text-underline-offset: 3px;
-      text-decoration-thickness: 2px;
-      font-weight: 800;
-      color: var(--text-primary);
-      background: rgba(123, 31, 162, 0.12);
-      padding: 0 5px;
-      border-radius: 4px;
-      transition: all 0.3s ease;
-    }
-    
-    .highlight-important {
-      text-decoration: underline;
-      text-decoration-color: var(--highlight-important);
-      text-underline-offset: 3px;
-      text-decoration-thickness: 2px;
-      font-weight: 800;
-      color: var(--text-primary);
-      background: rgba(255, 143, 0, 0.12);
-      padding: 0 5px;
-      border-radius: 4px;
-      transition: all 0.3s ease;
-    }
-    
-    .highlight-boundary {
-      text-decoration: underline;
-      text-decoration-color: var(--highlight-boundary);
-      text-underline-offset: 3px;
-      text-decoration-thickness: 2px;
-      font-weight: 800;
-      color: var(--text-primary);
-      background: rgba(2, 136, 209, 0.12);
-      padding: 0 5px;
-      border-radius: 4px;
-      transition: all 0.3s ease;
-    }
-
-    .card p span:hover {
-      transform: scale(1.03);
+    .cursor {
       display: inline-block;
+      width: 2px;
+      height: 1em;
+      background: var(--matrix);
+      margin-left: 2px;
+      vertical-align: text-bottom;
+      animation: blink 1s step-end infinite;
     }
-
-    /* Sección de preguntas */
-    .questions-section {
-      background: rgba(255, 255, 255, 0.95);
-      border-radius: 20px;
-      padding: 2.5rem 2rem;
-      margin: 3rem auto;
-      box-shadow: 0 10px 30px var(--shadow);
-      border: 3px solid var(--accent);
-      animation: fadeInUp 1s ease-out 0.9s both;
-    }
-
-    .questions-section h2 {
-      font-family: 'Patrick Hand', cursive;
-      font-size: 2.2rem;
-      color: var(--accent);
-      text-align: center;
-      margin-bottom: 1.5rem;
-    }
-
-    .question-card {
-      background: #F1F8F9;
-      border-left: 6px solid var(--accent);
-      padding: 1.2rem;
-      margin: 1.2rem 0;
-      border-radius: 8px;
-      transition: all 0.3s ease;
-    }
-
-    .question-card:hover {
-      transform: translateX(5px);
-      background: #E0F2F1;
-    }
-
-    .question-card strong {
-      color: var(--accent);
-      font-size: 1.05rem;
-      display: block;
-      margin-bottom: 0.4rem;
-      font-weight: 800;
-    }
-
-    .question-card p {
-      color: var(--text-secondary);
-      font-weight: 600;
-    }
+    @keyframes blink { 50% { opacity: 0; } }
 
     footer {
-      text-align: center;
-      padding: 2.5rem 1rem;
-      margin-top: 3rem;
-      background: rgba(255, 255, 255, 0.7);
+      margin-top: 1.5rem;
+      font-size: 0.85rem;
+      color: #555;
+      border-top: 1px solid rgba(255,255,255,0.05);
+      padding-top: 1rem;
+      opacity: 0;
+      animation: fadeIn 0.8s ease-out 1.2s forwards;
     }
+    .brand { color: var(--matrix); font-weight: 600; letter-spacing: 0.5px; }
 
-    .credits {
-      font-family: 'Patrick Hand', cursive;
-      font-size: 2.5rem;
-      color: var(--text-primary);
-      animation: brilliant 2s ease-in-out infinite alternate;
-    }
+    @keyframes fadeIn { to { opacity: 1; } }
 
-    @keyframes brilliant {
-      0% { 
-        text-shadow: 0 0 5px #fff, 0 0 10px var(--accent); 
-      }
-      100% { 
-        text-shadow: 0 0 10px #fff, 0 0 20px #fff, 0 0 30px var(--accent), 0 0 50px var(--accent); 
-      }
-    }
-
-    .progress-bar {
-      position: fixed;
-      top: 0;
-      left: 0;
-      height: 5px;
-      background: linear-gradient(90deg, var(--accent), #4DD0E1);
-      width: 0%;
-      z-index: 1000;
-      box-shadow: 0 0 8px var(--accent);
-    }
-
-    @media (max-width: 600px) {
-      header h1 { font-size: 2.2rem; }
-      .grid { grid-template-columns: 1fr; }
-      .questions-section { padding: 1.5rem 1rem; }
-      .credits { font-size: 2rem; }
+    /* Responsive */
+    @media (max-width: 480px) {
+      .container { padding: 2rem 1.5rem; }
+      .glitch { font-size: 5.5rem; letter-spacing: -2px; }
+      h2 { font-size: 1.2rem; }
+      .typewriter { font-size: 0.95rem; min-height: 4em; }
     }
   </style>
 </head>
 <body>
-
-  <div class="progress-bar" id="progressBar"></div>
-
-  <header>
-    <h1>𖤍BerMatCode𖤍</h1>
-    <p>Un mensaje necesario sobre la verdad y la desconfianza</p>
-  </header>
-
-  <div class="container">
-    <main class="grid">
-      <div class="card">
-        <h2>🔄 El Mismo Caso</h2>
-        <p>Mira, esto no es por una sola cosa, es por varias situaciones que ya pasaron y que tienen un <span class="highlight-important">mismo patrón</span>.</p>
-      </div>
-
-      <div class="card">
-        <h2>🚗 Lo del Desayuno</h2>
-        <p>Primero fue lo del desayuno. Yo te pregunté qué estabas haciendo y me dijiste que estabas sirviendo desayuno a tu papá. Después supe que no era verdad, porque en realidad <span class="highlight-lie">estabas yendo en camino a la feria</span> con tu familia. Eso no fue una confusión, fue una <span class="highlight-lie">mentira directa que metiste y negaste</span>.</p>
-      </div>
-
-      <div class="card">
-        <h2>🍠 Lo del Camote</h2>
-        <p>Luego pasó lo del camote. Te pregunté qué hacías y dijiste que lavabas camote. <span class="highlight-lie">En realidad estabas en la feria con tu papá y tu mamá.</span> Cuando intenté preguntarte mejor, <span class="highlight-denied">desviaste el tema</span>. Y cuando yo te pregunté si es que lo habías lavado de verdad, tú <span class="highlight-denied">dijiste que sí</span>.</p>
-      </div>
-
-      <div class="card">
-        <h2>🎭 La Actitud</h2>
-        <p>Yo estaba molesto y tú lo notabas .Aun así, tú me preguntaste si habías hecho algo mal, cuando en realidad sí sabías lo que había pasado. <span class="highlight-important">Actuar como si no hubiera ocurrido nada, cuando sí lo sabías</span>, fue lo que más me dolió.</p>
-      </div>
-
-      <div class="card">
-        <h2>🤝 La Promesa Rota</h2>
-        <p>Te confronté y me pediste una última oportunidad, dijiste que no lo volverías a hacer. Pero a los pocos días volvió a pasar. <span class="highlight-important">Eso hace que lo que dices pierda valor, porque no coincide con lo que haces</span>.</p>
-      </div>
-
-      <div class="card">
-        <h2>📱 La Recaída</h2>
-        <p>Me dijiste que te habías dormido, insististe varias veces que sí. Después admitiste que no estabas dormida, que estabas usando el celular. <span class="highlight-lie">Otra vez: dijiste algo falso, lo sostuviste y solo cambiaste cuando ya no podías mantenerlo</span>.</p>
-      </div>
-
-      <div class="card">
-        <h2>💔 El Problema Real</h2>
-        <p>Al final, el problema no es el desayuno, ni el camote, ni si estabas dormida. <span class="highlight-important">El problema es que se ha roto la confianza por varias mentiras seguidas. Así es imposible confiar cuando ya has venido mintiendo y negando</span>.</p>
-      </div>
-
-      <div class="card">
-        <h2>🔐 Conclusión</h2>
-        <p>Cuando en una relación tienes que estar dudando o confirmando cosas simples, <span class="highlight-important">la relación deja de ser tranquila. Y sin confianza, la relación no puede funcionar bien ya que uno miente el otro perdona</span>.</p>
-      </div>
-
-      <!-- Nueva tarjeta: Lo que pasó con mis amigos -->
-      <div class="card">
-        <h2>👥 Lo que pasó con mis amigos</h2>
-        <p>También está lo que pasó con mis amigos. Ellos te llamaron y tú respondiste normal, y te quedaste hablando con ellos como si nada. El problema no es solo que hayas contestado la llamada. <span class="highlight-boundary">El problema es que son mis amigos, no los tuyos</span>, y aun así <span class="highlight-boundary">entraste en confianza para hablar con ellos sin ningún tipo de límite</span>.</p>
-        <p>Y más aún, no fue algo corto o casual, sino que <span class="highlight-important">te quedaste conversando, como si fuera algo normal</span>. Desde mi lado, eso se siente como una <span class="highlight-boundary">falta de respeto</span>. Porque no es cualquier persona, son personas de mi entorno, y ese tipo de confianza no corresponde.</p>
-        <p>Esto también genera <span class="highlight-important">incomodidad y desconfianza</span>, porque no se ve como algo adecuado dentro de la relación. No es solo lo que hiciste, sino lo que transmite: <span class="highlight-boundary">que no estás marcando límites claros en situaciones que sí lo requieren</span>.</p>
-      </div>
-    </main>
-
-    <!-- Sección de preguntas reflexivas -->
-    <section class="questions-section">
-      <h2>🤔 Preguntas</h2>
-      
-      <div class="question-card">
-        <strong>💭 ¿Te sentirías bien si yo hiciera exactamente lo mismo que tú?</strong>
-        <p>Imagina que yo te mintiera sobre dónde estoy o con quién estoy. Y cuando me preguntes, te diga una versión falsa y la mantenga hasta que te enojes de verdad. ¿Podrías confiar en mí después de eso? ¿Te sentirías respetada?</p>
-      </div>
-
-      <div class="question-card">
-        <strong>💭 ¿No crees que es agotador tener que vivir dudando?</strong>
-        <p>El problema no es solo la mentira en sí, es que me obligas a estar en alerta constante. Si tengo que desconfiar de lo que me dices en cosas simples, la relación se vuelve una tortura en lugar de un lugar seguro para los dos.</p>
-      </div>
-
-      <div class="question-card">
-        <strong>💭 Si me pediste una "última oportunidad", ¿por qué la rompiste tan rápido?</strong>
-        <p>Pedir una última oportunidad es una promesa seria. Cuando vuelves a mentir tan pocos días después, me estás demostrando que tu promesa no valía nada. ¿Cómo puedo creer en tu palabra ahora?</p>
-      </div>
-
-      <div class="question-card">
-        <strong>💭 ¿Es justo que tenga que "atraparte" para que digas la verdad?</strong>
-        <p>La confianza es decir la verdad antes de que te pregunten. Esperar a que te presione para admitir lo que hiciste no es honestidad, es simplemente no tener más opciones. Eso duele.</p>
-      </div>
-
-      <div class="question-card">
-        <strong>💭 lo Hiciste</strong>
-        <p>Siempre me negaste en las preguntas que te hacía cuando yo ya lo sabía</p>
-      </div>
-    </section>
-  </div>
-
-  <footer>
-    <div class="credits">𖤍BerMatCode𖤍</div>
-  </footer>
+  <canvas id="matrix"></canvas>
+  <div class="scanlines"></div>
+  
+  <main class="container" role="main">
+    <div class="glitch-wrapper">
+      <h1 class="glitch" data-text="404">404</h1>
+    </div>
+    <h2>Página no encontrada</h2>
+    <p class="typewriter" id="typewriter"></p>
+    <footer>
+      © <span id="year"></span> <span class="brand">De BerMatCode</span> | Sistema seguro
+    </footer>
+  </main>
 
   <script>
-    // Barra de progreso al hacer scroll
-    window.onscroll = function() {
-      let winScroll = document.body.scrollTop || document.documentElement.scrollTop;
-      let height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
-      let scrolled = (winScroll / height) * 100;
-      document.getElementById("progressBar").style.width = scrolled + "%";
-    };
-  </script>
+    // Año dinámico
+    document.getElementById('year').textContent = new Date().getFullYear();
 
+    // Efecto Typewriter
+    (function() {
+      const text = "El recurso solicitado ha sido eliminado o nunca existió en nuestro servidor. Verifique la ruta de acceso o contacte al administrador del sistema.";
+      const el = document.getElementById('typewriter');
+      let i = 0;
+      function type() {
+        if (i < text.length) {
+          el.innerHTML = text.substring(0, i + 1) + '<span class="cursor"></span>';
+          i++;
+          setTimeout(type, 35 + Math.random() * 25); // Velocidad variable para realismo
+        } else {
+          // Dejar el cursor parpadeando al final
+          el.innerHTML = text + '<span class="cursor"></span>';
+        }
+      }
+      setTimeout(type, 1200);
+    })();
+
+    // Matrix con caracteres chinos
+    (function() {
+      const canvas = document.getElementById('matrix');
+      const ctx = canvas.getContext('2d');
+      const fontSize = 15;
+      // Caracteres chinos densos y variados
+      const chars = '的一了是我不在人们有来他这上着个地到大里说就去子得也和那要下看天时过出小么起你都把好还多可发能做着会开而还些又生学也于之方多经进少系统代码运行数据流网络协议加密解密节点同步验证通过权限拒绝访问错误日志';
+      let drops = [];
+
+      function init() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        const cols = Math.floor(canvas.width / fontSize);
+        drops = Array(cols).fill(0);
+      }
+
+      function draw() {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.06)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.font = `${fontSize}px "Microsoft YaHei", "PingFang SC", monospace`;
+        ctx.fillStyle = '#00ff41';
+
+        for (let i = 0; i < drops.length; i++) {
+          const text = chars[Math.floor(Math.random() * chars.length)];
+          // Algunas columnas más brillantes (efecto lluvia Matrix real)
+          ctx.fillStyle = Math.random() > 0.95 ? '#ffffff' : '#00ff41';
+          ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+          if (drops[i] * fontSize > canvas.height && Math.random() > 0.98) {
+            drops[i] = 0;
+          }
+          drops[i] += Math.random() > 0.9 ? 2 : 1;
+        }
+        requestAnimationFrame(draw);
+      }
+
+      window.addEventListener('resize', init);
+      init();
+      requestAnimationFrame(draw);
+    })();
+  </script>
 </body>
 </html>
