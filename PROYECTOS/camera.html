@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dual Mode Interaction - Emotion Orb + Particles</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.154.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.154.0/examples/jsm/"
+            }
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/face-landmarks-detection"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background: #020205; font-family: 'Segoe UI', sans-serif; }
+        #canvas-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2; }
+        #video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); z-index: 1; opacity: 0.7; }
+        
+        .glass-panel {
+            background: rgba(10, 10, 20, 0.7);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+        }
+        .control-btn {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+        }
+        .control-btn.active {
+            background: linear-gradient(135deg, rgba(100, 200, 255, 0.4), rgba(100, 200, 255, 0.1));
+            border: 1px solid rgba(100, 200, 255, 0.5);
+            box-shadow: 0 0 25px rgba(79, 209, 197, 0.3);
+        }
+        #loader-overlay {
+            position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; background-color: rgba(0, 0, 0, 0.95);
+            transition: opacity 0.7s ease;
+        }
+        .loader {
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-left-color: #00ffff;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .mode-item { transition: all 0.2s ease; opacity: 0.4; transform: scale(0.95); }
+        .mode-item.active { opacity: 1; transform: scale(1.0); color: #22d3ee; font-weight: bold; text-shadow: 0 0 10px rgba(34, 211, 238, 0.4); }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    <video id="video" playsinline></video>
+    
+    <div id="loader-overlay">
+        <div class="loader mb-6"></div>
+        <div class="text-cyan-300 text-2xl font-bold tracking-widest uppercase">Dual System</div>
+        <div class="text-gray-500 text-xs mt-3 tracking-widest">INITIALIZING...</div>
+    </div>
+
+    <div class="absolute top-0 left-0 w-full h-full pointer-events-none z-10 p-4 md:p-8 flex flex-col justify-between">
+        <div class="flex justify-between items-start pointer-events-auto gap-4">
+            <div class="glass-panel p-5">
+                <h1 class="text-white text-2xl font-bold mb-2">
+                    <span id="mode-title">BERMATCODE</span>
+                    <span class="text-xs text-cyan-400">v3.1</span>
+                </h1>
+                <div class="flex items-center gap-3 bg-black/30 rounded-full px-3 py-1 w-fit border border-white/5">
+                    <div id="status-dot" class="w-2 h-2 rounded-full bg-red-500 transition-all duration-500"></div>
+                    <span id="status-text" class="text-[10px] text-gray-300 font-mono uppercase tracking-wider">Initializing</span>
+                </div>
+                <div id="gesture-modes" class="text-[10px] text-gray-400 mt-3 font-mono border-t border-white/10 pt-2">
+                    <div id="mode-scale" class="mode-item">👋 Five Fingers: Energy Burst (Scale)</div>
+                    <div id="mode-rotate" class="mode-item">☝️ Index Finger: View Rotation</div>
+                    <div id="mode-roll" class="mode-item">✌️ Two Fingers: Plane Roll</div>
+                </div>
+            </div>
+
+            <div class="flex gap-3">
+                <button onclick="toggleFullScreen()" class="glass-panel p-4 text-white hover:text-cyan-300 control-btn rounded-full">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <div id="particle-controls" class="pointer-events-auto flex flex-col md:flex-row gap-6 items-end md:items-center justify-between w-full">
+            <div class="glass-panel p-2 flex gap-2 overflow-x-auto max-w-full">
+                <button onclick="changeShape('sphere')" class="control-btn active px-6 py-3 rounded-lg text-sm text-white font-semibold whitespace-nowrap" data-shape="sphere">Nebula</button>
+                <button onclick="changeShape('heart')" class="control-btn px-6 py-3 rounded-lg text-sm text-white font-semibold whitespace-nowrap" data-shape="heart">Heart</button>
+                <button onclick="changeShape('saturn')" class="control-btn px-6 py-3 rounded-lg text-sm text-white font-semibold whitespace-nowrap" data-shape="saturn">Saturn</button>
+                <button onclick="changeShape('lotus')" class="control-btn px-6 py-3 rounded-lg text-sm text-white font-semibold whitespace-nowrap" data-shape="lotus">Lotus</button>
+                <button onclick="changeShape('galaxy')" class="control-btn px-6 py-3 rounded-lg text-sm text-white font-semibold whitespace-nowrap" data-shape="galaxy">Galaxy</button>
+                <button onclick="changeShape('jellyfish')" class="control-btn px-6 py-3 rounded-lg text-sm text-white font-semibold whitespace-nowrap" data-shape="jellyfish">Jellyfish</button>
+                <button onclick="changeShape('torus')" class="control-btn px-6 py-3 rounded-lg text-sm text-white font-semibold whitespace-nowrap" data-shape="torus">Torus</button>
+                <button onclick="changeShape('tornado')" class="control-btn px-6 py-3 rounded-lg text-sm text-white font-semibold whitespace-nowrap" data-shape="tornado">Tornado</button>
+                <button onclick="changeShape('doublehelix')" class="control-btn px-6 py-3 rounded-lg text-sm text-white font-semibold whitespace-nowrap" data-shape="doublehelix">Double Helix</button>
+                <button onclick="changeShape('cube')" class="control-btn px-6 py-3 rounded-lg text-sm text-white font-semibold whitespace-nowrap" data-shape="cube">Cube</button>
+                <button onclick="changeShape('butterfly')" class="control-btn px-6 py-3 rounded-lg text-sm text-white font-semibold whitespace-nowrap" data-shape="butterfly">Butterfly</button>
+                <button onclick="changeShape('peachblossom')" class="control-btn px-6 py-3 rounded-lg text-sm text-white font-semibold whitespace-nowrap" data-shape="peachblossom">Peach Blossom</button>
+            </div>
+            <div class="glass-panel p-4 flex items-center gap-4">
+                <span class="text-white text-xs font-mono tracking-wider uppercase">BM Color</span>
+                <input type="color" id="color-picker" value="#00ffff" class="w-8 h-8 rounded-full cursor-pointer" onchange="updateColor(this.value)">
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+        // ==================== 配置 ====================
+        const CONFIG = {
+            PARTICLE_COUNT: 36000,
+            PARTICLE_SIZE: 0.18,
+            VIDEO_WIDTH: 640,
+            VIDEO_HEIGHT: 480,
+            FACE_KEYPOINTS: 468,
+            SATURN_BODY_RATIO: 0.3
+        };
+
+        // ==================== 全局变量 ====================
+        let scene, camera, renderer, composer, controls;
+        let emotionOrb = null;
+        let particles = null;
+        let video, faceDetector, hands;
+        let currentMode = 'hand';
+
+        // 情感球状态
+        let faceMotionScore = 0;
+        let stressLevel = 0;
+        let breathingPhase = 0;
+        const lastFacePositionData = new Float32Array(CONFIG.FACE_KEYPOINTS * 3);
+        let lastFaceTime = 0;
+
+        // 粒子系统状态
+        let currentShape = 'sphere';
+        let handInfluence = 0;
+        let isHandDetected = false;
+        let userBaseColor = new THREE.Color(0x00ffff);
+        let targetPositions = new Float32Array(CONFIG.PARTICLE_COUNT * 3);
+        let targetColors = new Float32Array(CONFIG.PARTICLE_COUNT * 3);
+        let rotationVelocity = { x: 0, y: 0, z: 0 };
+        let previousFingerPos = { x: 0, y: 0 };
+        let smoothedFingerPos = { x: 0, y: 0 };
+        let isTrackingRotation = false;
+        let isTrackingRoll = false;
+        let smoothedIndexTip = { x: 0, y: 0 };
+        let smoothedMiddleTip = { x: 0, y: 0 };
+        let previousRollAngle = 0;
+        let currentStableMode = 'scale';
+        let modeFrameCounter = 0;
+        let lastTimeHandDetected = 0;
+        let clock = new THREE.Clock();
+        // 形状循环及手势“扇巴掌”检测
+        const SHAPES_ORDER = ['sphere','heart','saturn','lotus','galaxy','jellyfish','torus','tornado','doublehelix','cube','butterfly','peachblossom'];
+        let previousPalmPos = { x: 0, y: 0 };
+        let lastSlapTime = 0;
+
+        // ==================== 着色器 ====================
+        const orbVertexShader = `
+            uniform float uTime;
+            uniform float uPulseScale;
+            uniform float uMotionAmplitude;
+            varying vec3 vNormal;
+            void main() {
+                vNormal = normal;
+                vec3 pos = position;
+                // 呼吸缩放提升20%
+                pos *= (1.0 + uPulseScale * 0.216);
+                // 进一步减少圆滑：再提高频率，并显著降低平滑占比
+                float s1 = sin(pos.x * 1.35 + uTime * 2.0);
+                float s2 = sin(pos.y * 1.35 + uTime * 1.7);
+                float s3 = sin(pos.z * 1.1 + uTime * 1.8);
+                float combined = (s1 + s2 + s3) / 3.0;
+                // 极少量平滑，使波形更尖、更有细节
+                combined = combined * 0.92 + smoothstep(-1.0, 1.0, combined) * 0.08;
+                // 幅度提升20%
+                float wave = combined * (0.06 + uMotionAmplitude * 1.44);
+                pos += normal * wave;
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+            }
+        `;
+        const orbFragmentShader = `
+            uniform float uStressLevel;
+            varying vec3 vNormal;
+            void main() {
+                vec3 lightDir = normalize(vec3(0.5, 0.8, 0.2));
+                float ndl = max(dot(normalize(vNormal), lightDir), 0.0);
+                // 六色渐变：蓝->青->绿->黄->橙->红
+                vec3 color1 = vec3(0.2, 0.3, 0.9);
+                vec3 color2 = vec3(0.1, 0.8, 1.0);
+                vec3 color3 = vec3(0.1, 1.0, 0.6);
+                vec3 color4 = vec3(1.0, 0.9, 0.2);
+                vec3 color5 = vec3(1.0, 0.6, 0.2);
+                vec3 color6 = vec3(1.0, 0.2, 0.2);
+                vec3 color;
+                if (uStressLevel < 0.2) {
+                    color = mix(color1, color2, (uStressLevel - 0.0) / 0.2);
+                } else if (uStressLevel < 0.4) {
+                    color = mix(color2, color3, (uStressLevel - 0.2) / 0.2);
+                } else if (uStressLevel < 0.6) {
+                    color = mix(color3, color4, (uStressLevel - 0.4) / 0.2);
+                } else if (uStressLevel < 0.8) {
+                    color = mix(color4, color5, (uStressLevel - 0.6) / 0.2);
+                } else {
+                    color = mix(color5, color6, (uStressLevel - 0.8) / 0.2);
+                }
+                color = color * (0.5 + ndl * 0.5);
+                gl_FragColor = vec4(color, 0.75);
+            }
+        `;
+
+        // ==================== 初始化 ====================
+        async function init() {
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x020205, 0.02);
+
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 30;
+
+            renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true, powerPreference: "high-performance" });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+            renderer.toneMapping = THREE.ReinhardToneMapping;
+            renderer.setClearColor(0x000000, 0);
+            renderer.setClearColor(0x000000, 0);
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            // Post Processing
+            const renderScene = new RenderPass(scene, camera);
+            const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
+            bloomPass.threshold = 0.05;
+            bloomPass.strength = 1.4;
+            bloomPass.radius = 0.6;
+            composer = new EffectComposer(renderer);
+            composer.addPass(renderScene);
+            composer.addPass(bloomPass);
+
+            // OrbitControls
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.autoRotate = true;
+            controls.autoRotateSpeed = 0.5;
+
+            await initCamera();
+            await initHandDetector();
+            
+            if (!particles) createParticles();
+            if (video) video.style.display = 'none';
+
+            window.addEventListener('resize', onWindowResize);
+            hideLoader();
+            startHandTracking();
+            animate();
+        }
+
+        function createEmotionOrb() {
+            const geometry = new THREE.SphereGeometry(6, 64, 64);
+            const material = new THREE.ShaderMaterial({
+                uniforms: {
+                    uTime: { value: 0 },
+                    uPulseScale: { value: 0 },
+                    uMotionAmplitude: { value: 0 },
+                    uStressLevel: { value: 0 }
+                },
+                vertexShader: orbVertexShader,
+                fragmentShader: orbFragmentShader,
+                transparent: true,
+                blending: THREE.AdditiveBlending
+            });
+            emotionOrb = new THREE.Mesh(geometry, material);
+            scene.add(emotionOrb);
+        }
+
+        function createParticles() {
+            if (particles) scene.remove(particles);
+
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(CONFIG.PARTICLE_COUNT * 3);
+            const colors = new Float32Array(CONFIG.PARTICLE_COUNT * 3);
+
+            generateShapePositions('sphere', positions);
+            generateShapeColors('sphere', colors);
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+            const sprite = createParticleTexture();
+            const material = new THREE.PointsMaterial({
+                size: CONFIG.PARTICLE_SIZE,
+                map: sprite,
+                color: userBaseColor,
+                transparent: true,
+                opacity: 0.8,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false,
+                sizeAttenuation: true,
+                vertexColors: true
+            });
+
+            particles = new THREE.Points(geometry, material);
+            scene.add(particles);
+
+            targetPositions = new Float32Array(positions);
+            targetColors = new Float32Array(colors);
+
+            // 初始让图案正对相机
+            faceCameraAndReset();
+        }
+
+        function createParticleTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 32;
+            canvas.height = 32;
+            const context = canvas.getContext('2d');
+            const gradient = context.createRadialGradient(16, 16, 0, 16, 16, 16);
+            gradient.addColorStop(0, 'rgba(255,255,255,1)');
+            gradient.addColorStop(0.4, 'rgba(255,255,255,0.5)');
+            gradient.addColorStop(1, 'rgba(0,0,0,0)');
+            context.fillStyle = gradient;
+            context.fillRect(0, 0, 32, 32);
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        function generateShapePositions(type, array) {
+            for (let i = 0; i < CONFIG.PARTICLE_COUNT; i++) {
+                let x, y, z;
+                if (type === 'sphere') {
+                    const r = 10 + Math.random() * 2;
+                    const theta = Math.random() * Math.PI * 2;
+                    const phi = Math.acos(2 * Math.random() - 1);
+                    x = r * Math.sin(phi) * Math.cos(theta);
+                    y = r * Math.sin(phi) * Math.sin(theta);
+                    z = r * Math.cos(phi);
+                    if (i < CONFIG.PARTICLE_COUNT * 0.2) { x *= 0.3; y *= 0.3; z *= 0.3; }
+                } else if (type === 'heart') {
+                    const t = Math.PI - 2 * Math.PI * Math.random();
+                    const u = 2 * Math.PI * Math.random();
+                    x = 16 * Math.pow(Math.sin(t), 3);
+                    y = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
+                    z = 6 * Math.cos(t) * Math.sin(u) * Math.sin(t);
+                    const scale = 0.6;
+                    x *= scale; y *= scale; z *= scale;
+                } else if (type === 'saturn') {
+                    if (i < CONFIG.PARTICLE_COUNT * CONFIG.SATURN_BODY_RATIO) {
+                        const r = 5.5;
+                        const theta = Math.random() * Math.PI * 2;
+                        const phi = Math.acos(2 * Math.random() - 1);
+                        x = r * Math.sin(phi) * Math.cos(theta);
+                        y = r * 0.9 * Math.sin(phi) * Math.sin(theta);
+                        z = r * Math.cos(phi);
+                    } else {
+                        const angle = Math.random() * Math.PI * 2;
+                        const r = 7 + Math.random() * 10;
+                        x = r * Math.cos(angle);
+                        y = (Math.random() - 0.5) * 0.3;
+                        z = r * Math.sin(angle);
+                    }
+                } else if (type === 'lotus') {
+                    const u = Math.random() * Math.PI * 2;
+                    const v = Math.random();
+                    const petals = 7;
+                    const rBase = 8 * (0.5 + 0.5 * Math.pow(Math.sin(petals * u * 0.5), 2)) * v;
+                    x = rBase * Math.cos(u);
+                    z = rBase * Math.sin(u);
+                    y = 4 * Math.pow(v, 2) - 2;
+                } else if (type === 'galaxy') {
+                    const arms = 3;
+                    const spin = i % arms;
+                    const angleOffset = (spin / arms) * Math.PI * 2;
+                    const dist = Math.pow(Math.random(), 0.5);
+                    const r = dist * 20;
+                    const angle = dist * 10 + angleOffset;
+                    x = r * Math.cos(angle);
+                    z = r * Math.sin(angle);
+                    y = (Math.random() - 0.5) * (15 - r) * 0.2;
+                } else if (type === 'jellyfish') {
+                    // 伞状身体部分 (25%的粒子)
+                    if (i < CONFIG.PARTICLE_COUNT * 0.25) {
+                        const u = Math.random() * Math.PI * 2;
+                        const v = Math.random();
+                        const r = 5 * Math.sqrt(v);
+                        x = r * Math.cos(u);
+                        z = r * Math.sin(u);
+                        // 扁平钟形伞顶，顶部较平，边缘下垂
+                        const centerFlatness = Math.pow(1 - v, 2); // 中心更平坦
+                        const edgeCurve = Math.pow(v, 1.5); // 边缘弧度
+                        y = 6 + centerFlatness * 2 - edgeCurve * 5.5;
+                    } else {
+                        // 触手部分 (75%的粒子) - 16条触手，密集向下垂落
+                        const tentacleCount = 16;
+                        const particlesPerTentacle = (CONFIG.PARTICLE_COUNT * 0.75) / tentacleCount;
+                        const tentacleIndex = Math.floor((i - CONFIG.PARTICLE_COUNT * 0.25) / particlesPerTentacle);
+                        const posInTentacle = ((i - CONFIG.PARTICLE_COUNT * 0.25) % particlesPerTentacle) / particlesPerTentacle;
+                        
+                        // 均匀分布在圆周上，稍有变化
+                        const baseAngle = (tentacleIndex / tentacleCount) * Math.PI * 2;
+                        const angleVariation = (Math.random() - 0.5) * 0.15;
+                        const angle = baseAngle + angleVariation;
+                        
+                        // 触手长度变化
+                        const tentacleLengthVariation = 0.8 + Math.random() * 0.4;
+                        const length = Math.pow(posInTentacle, 0.8) * tentacleLengthVariation;
+                        
+                        // 很小的起始半径，让触手紧密聚拢
+                        const radiusVariation = Math.random();
+                        const startRadius = 2.5 + radiusVariation * 1;
+                        
+                        // 微小的螺旋和弯曲效果
+                        const spiral = Math.sin(length * Math.PI * 2 + tentacleIndex * 1.5) * (0.2 + length * 0.3);
+                        const bendPhase = tentacleIndex * 0.5;
+                        const bend = Math.sin(length * Math.PI * 1.2 + bendPhase) * (0.4 + length * 0.4);
+                        
+                        // 触手几乎垂直向下，只略微向外
+                        const radiusExpansion = startRadius + length * 0.15 + Math.abs(bend) * 0.05;
+                        
+                        x = radiusExpansion * Math.cos(angle) + bend * Math.cos(angle + Math.PI/4) + spiral * Math.cos(angle + Math.PI/2);
+                        z = radiusExpansion * Math.sin(angle) + bend * Math.sin(angle + Math.PI/4) + spiral * Math.sin(angle + Math.PI/2);
+                        // 触手从伞体底部开始，主要向下延伸
+                        y = 2 - radiusVariation * 0.3 - length * 20 - Math.abs(bend) * 0.2;
+                        
+                        // 很小的随机扰动
+                        x += (Math.random() - 0.5) * 0.4 * length;
+                        z += (Math.random() - 0.5) * 0.4 * length;
+                    }
+                } else if (type === 'torus') {
+                    // 圆环（甜甜圈）
+                    const R = 10; // 主半径
+                    const r = 2;  // 次半径
+                    const u = Math.random() * Math.PI * 2;
+                    const v = Math.random() * Math.PI * 2;
+                    x = (R + r * Math.cos(v)) * Math.cos(u);
+                    z = (R + r * Math.cos(v)) * Math.sin(u);
+                    y = r * Math.sin(v);
+                } else if (type === 'tornado') {
+                    // 旋涡锥（龙卷风）
+                    const h = Math.random();
+                    const baseY = 8 - h * 24; // 从上到下
+                    const rad = 0.5 + h * 8 + Math.random() * 0.3; // 半径随高度增大
+                    const turns = 10;
+                    const theta = h * turns * Math.PI * 2 + Math.random() * 0.5;
+                    x = rad * Math.cos(theta);
+                    z = rad * Math.sin(theta);
+                    y = baseY;
+                } else if (type === 'doublehelix') {
+                    // 双螺旋
+                    const t = Math.random();
+                    const height = -12 + t * 24;
+                    const radius = 3 + Math.sin(t * Math.PI * 4) * 0.6;
+                    const phase = (i % 2 === 0) ? 0 : Math.PI; // 两股相反相位
+                    const angle = t * Math.PI * 10 + phase;
+                    x = radius * Math.cos(angle);
+                    z = radius * Math.sin(angle);
+                    y = height + (Math.random() - 0.5) * 0.4;
+                } else if (type === 'cube') {
+                    // 立方体表面
+                    const s = 12; // 半边长
+                    const face = Math.floor(Math.random() * 6);
+                    const a = (Math.random() - 0.5) * 2 * s;
+                    const b = (Math.random() - 0.5) * 2 * s;
+                    if (face === 0) { x = s; y = a; z = b; }
+                    else if (face === 1) { x = -s; y = a; z = b; }
+                    else if (face === 2) { x = a; y = s; z = b; }
+                    else if (face === 3) { x = a; y = -s; z = b; }
+                    else if (face === 4) { x = a; y = b; z = s; }
+                    else { x = a; y = b; z = -s; }
+                } else if (type === 'butterfly') {
+                    // 蝴蝶曲线（二维抬升到三维）
+                    const t = Math.random() * Math.PI * 2;
+                    const r = Math.exp(Math.sin(t)) - 2 * Math.cos(4 * t) + Math.pow(Math.sin((2 * t - Math.PI) / 24), 5);
+                    const scale = 8;
+                    x = scale * r * Math.cos(t);
+                    y = scale * r * Math.sin(t) * 0.6;
+                    z = (Math.random() - 0.5) * 2; // 少量厚度
+                } else if (type === 'peachblossom') {
+                    // 桃花（更像花瓣：中心花蕊 + 5 个清晰花瓣 + 细小萼片环）
+                    const petals = 5;
+                    const coreRatio = 0.12; // 花蕊比例
+                    const petalRatio = 0.70; // 花瓣比例
+                    const coreCount = Math.floor(CONFIG.PARTICLE_COUNT * coreRatio);
+                    const petalCountAll = Math.floor(CONFIG.PARTICLE_COUNT * petalRatio);
+                    if (i < coreCount) {
+                        // 花蕊：小球簇
+                        const r = 1.6 + Math.random() * 0.6;
+                        const a = Math.random() * Math.PI * 2;
+                        const b = Math.acos(2 * Math.random() - 1);
+                        x = r * Math.sin(b) * Math.cos(a);
+                        z = r * Math.sin(b) * Math.sin(a);
+                        y = (Math.random() - 0.5) * 1.2; // 略有厚度
+                    } else if (i < coreCount + petalCountAll) {
+                        // 花瓣：按瓣索引分配，具有角度宽度和锥形长度
+                        const perPetal = petalCountAll / petals;
+                        const petalIndex = Math.floor((i - coreCount) / perPetal);
+                        const angleCenter = (petalIndex / petals) * Math.PI * 2;
+                        const width = 0.65; // 每瓣角宽
+                        const phi = (Math.random() - 0.5) * width; // 相对瓣中心角偏移
+                        const t = Math.pow(Math.random(), 0.6); // 沿着瓣从根到尖的参数
+                        const inner = 3.0 + Math.random() * 0.6; // 瓣根半径
+                        const length = 7.5 + (petalIndex % 2) * 0.8 + Math.random() * 1.2; // 瓣长度
+                        const lateralTaper = 1 - Math.pow(phi / (width * 0.5), 2); // 两侧收窄
+                        const r = inner + length * t * lateralTaper;
+                        x = r * Math.cos(angleCenter + phi);
+                        z = r * Math.sin(angleCenter + phi);
+                        // 轻微弯曲与厚度，靠近瓣尖略隆起
+                        const dome = Math.sin(t * Math.PI) * 0.9 - 0.45;
+                        y = dome + (Math.random() - 0.5) * 0.12;
+                        // 让花瓣整体略向外拱
+                        x += 0.25 * t * Math.cos(angleCenter);
+                        z += 0.25 * t * Math.sin(angleCenter);
+                    } else {
+                        // 萼片环：外圈细薄环，略低于花面
+                        const theta = Math.random() * Math.PI * 2;
+                        const r = 4.8 + Math.random() * 1.2;
+                        x = r * Math.cos(theta);
+                        z = r * Math.sin(theta);
+                        y = -0.8 + (Math.random() - 0.5) * 0.2;
+                    }
+                }
+                array[i * 3] = x;
+                array[i * 3 + 1] = y;
+                array[i * 3 + 2] = z;
+            }
+        }
+
+        function generateShapeColors(type, array) {
+            for (let i = 0; i < CONFIG.PARTICLE_COUNT; i++) {
+                const brightness = 0.2 + Math.random() * 0.8;
+                if (type === 'saturn' && i < CONFIG.PARTICLE_COUNT * CONFIG.SATURN_BODY_RATIO) {
+                    array[i * 3] = 1.0 * brightness;
+                    array[i * 3 + 1] = 0.7 * brightness;
+                    array[i * 3 + 2] = 0.3 * brightness;
+                } else {
+                    array[i * 3] = brightness;
+                    array[i * 3 + 1] = brightness;
+                    array[i * 3 + 2] = brightness;
+                }
+            }
+        }
+
+        // ==================== 摄像头初始化 ====================
+        async function initCamera() {
+            try {
+                video = document.getElementById('video');
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'user', width: { ideal: CONFIG.VIDEO_WIDTH }, height: { ideal: CONFIG.VIDEO_HEIGHT } }
+                });
+                video.srcObject = stream;
+                video.width = CONFIG.VIDEO_WIDTH;
+                video.height = CONFIG.VIDEO_HEIGHT;
+                await new Promise(r => { video.onloadedmetadata = () => { video.play(); r(); }; });
+            } catch (e) {
+                console.error('Camera error:', e);
+                updateStatus('CAMERA_ERROR', 'red');
+            }
+        }
+
+        async function initFaceDetector() {
+            try {
+                await tf.setBackend('webgl');
+                await tf.ready();
+                const FACE_MODEL = faceLandmarksDetection.SupportedModels.MediaPipeFaceMesh;
+                faceDetector = await faceLandmarksDetection.createDetector(FACE_MODEL, { runtime: 'tfjs', maxFaces: 1 });
+            } catch (e) {
+                console.error('Face detector error:', e);
+            }
+        }
+
+        async function initHandDetector() {
+            try {
+                hands = new Hands({
+                    locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`
+                });
+                hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+                hands.onResults(onHandResults);
+            } catch (e) {
+                console.error('Hand detector error:', e);
+            }
+        }
+
+        // ==================== 检测循环 ====================
+        function startDetection() {
+            if (currentMode === 'face') {
+                detectFace();
+            } else {
+                startHandTracking();
+            }
+        }
+
+        async function detectFace() {
+            if (!faceDetector || !video || video.readyState < 2 || currentMode !== 'face') {
+                setTimeout(detectFace, 100);
+                return;
+            }
+
+            try {
+                const faces = await faceDetector.estimateFaces(video, { flipHorizontal: false }, performance.now());
+                if (faces && faces.length > 0) {
+                    processFaceData(faces[0].keypoints);
+                    updateBreathing();
+                    emotionOrb.material.uniforms.uMotionAmplitude.value = faceMotionScore;
+                    emotionOrb.material.uniforms.uStressLevel.value = stressLevel;
+                    emotionOrb.visible = true;
+                    const kp = faces[0].keypoints[0];
+                    emotionOrb.position.x = ((kp.x / video.videoWidth) - 0.5) * 20;
+                    emotionOrb.position.y = -((kp.y / video.videoHeight) - 0.5) * 20;
+                    updateStatus('FACE_TRACKING', 'cyan');
+                } else {
+                    emotionOrb.visible = false;
+                    faceMotionScore = 0;
+                    updateStatus('FACE_LOST', 'yellow');
+                }
+            } catch (e) {
+                console.error('Face detection error:', e);
+            }
+            setTimeout(detectFace, 1000 / 30);
+        }
+
+        function processFaceData(keypoints) {
+            let totalDisplacement = 0;
+            const now = performance.now();
+
+            for (let i = 0; i < CONFIG.FACE_KEYPOINTS; i++) {
+                const kp = keypoints[i];
+                const idx = i * 3;
+                if (lastFaceTime !== 0 && lastFacePositionData[idx] !== undefined) {
+                    const dx = kp.x - lastFacePositionData[idx];
+                    const dy = kp.y - lastFacePositionData[idx + 1];
+                    totalDisplacement += Math.sqrt(dx * dx + dy * dy);
+                }
+                lastFacePositionData[idx] = kp.x;
+                lastFacePositionData[idx + 1] = kp.y;
+            }
+
+            const avgDisp = totalDisplacement / CONFIG.FACE_KEYPOINTS;
+            const rawScore = avgDisp * 0.5;
+            faceMotionScore += (rawScore - faceMotionScore) * (rawScore > faceMotionScore ? 0.1 : 0.8);
+            faceMotionScore = Math.max(0, Math.min(1, faceMotionScore));
+            stressLevel += (faceMotionScore - stressLevel) * 0.15;
+            lastFaceTime = now;
+        }
+
+        function updateBreathing() {
+            const period = 60 / 15;
+            const timeInPeriod = (performance.now() / 1000) % period;
+            const targetPulse = (Math.sin((timeInPeriod / period) * Math.PI * 2) + 1) / 2;
+            breathingPhase += (targetPulse - breathingPhase) * 0.05;
+            emotionOrb.material.uniforms.uPulseScale.value = breathingPhase;
+        }
+
+        function onHandResults(results) {
+            const now = Date.now();
+            
+            if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
+                if (now - lastTimeHandDetected > 800) {
+                    isHandDetected = false;
+                    updateStatus('HAND_LOST', 'yellow');
+                    handInfluence = THREE.MathUtils.lerp(handInfluence, 0.5, 0.02);
+                    ['mode-scale', 'mode-rotate', 'mode-roll'].forEach(id => document.getElementById(id).classList.remove('active'));
+                }
+                return;
+            }
+
+            isHandDetected = true;
+            lastTimeHandDetected = now;
+            updateStatus('HAND_TRACKING', 'cyan');
+
+            const landmarks = results.multiHandLandmarks[0];
+            const getDist = (i, j) => {
+                const dx = landmarks[i].x - landmarks[j].x;
+                const dy = landmarks[i].y - landmarks[j].y;
+                return Math.sqrt(dx * dx + dy * dy);
+            };
+
+            const isIndexOpen = getDist(8, 0) > getDist(6, 0) * 1.1;
+            const isMiddleOpen = getDist(12, 0) > getDist(10, 0) * 1.1;
+            const isRingOpen = getDist(16, 0) > getDist(14, 0) * 1.1;
+            const isPinkyOpen = getDist(20, 0) > getDist(18, 0) * 1.1;
+            const openPalm = isIndexOpen && isMiddleOpen && isRingOpen && isPinkyOpen;
+
+            let detectedMode = 'scale';
+            if (isRingOpen || isPinkyOpen) {
+                detectedMode = 'scale';
+            } else if (isIndexOpen && isMiddleOpen) {
+                detectedMode = 'roll';
+            } else if (isIndexOpen && !isMiddleOpen) {
+                detectedMode = 'rotate';
+            }
+
+            if (detectedMode !== currentStableMode) {
+                modeFrameCounter++;
+                if (modeFrameCounter > 4) {
+                    currentStableMode = detectedMode;
+                    modeFrameCounter = 0;
+                    isTrackingRotation = false;
+                    isTrackingRoll = false;
+                }
+            } else {
+                modeFrameCounter = 0;
+            }
+
+            ['mode-scale', 'mode-rotate', 'mode-roll'].forEach(id => document.getElementById(id).classList.remove('active'));
+            document.getElementById(`mode-${currentStableMode}`).classList.add('active');
+
+            if (currentStableMode === 'roll') {
+                const rawIndex = landmarks[8];
+                const rawMiddle = landmarks[12];
+                if (!isTrackingRoll) {
+                    smoothedIndexTip = { x: rawIndex.x, y: rawIndex.y };
+                    smoothedMiddleTip = { x: rawMiddle.x, y: rawMiddle.y };
+                    previousRollAngle = Math.atan2(rawIndex.y - rawMiddle.y, rawIndex.x - rawMiddle.x);
+                    isTrackingRoll = true;
+                } else {
+                    smoothedIndexTip.x = THREE.MathUtils.lerp(smoothedIndexTip.x, rawIndex.x, 0.2);
+                    smoothedIndexTip.y = THREE.MathUtils.lerp(smoothedIndexTip.y, rawIndex.y, 0.2);
+                    smoothedMiddleTip.x = THREE.MathUtils.lerp(smoothedMiddleTip.x, rawMiddle.x, 0.2);
+                    smoothedMiddleTip.y = THREE.MathUtils.lerp(smoothedMiddleTip.y, rawMiddle.y, 0.2);
+                }
+                const currentAngle = Math.atan2(smoothedIndexTip.y - smoothedMiddleTip.y, smoothedIndexTip.x - smoothedMiddleTip.x);
+                let deltaAngle = currentAngle - previousRollAngle;
+                if (deltaAngle > Math.PI) deltaAngle -= 2 * Math.PI;
+                if (deltaAngle < -Math.PI) deltaAngle += 2 * Math.PI;
+                rotationVelocity.z = THREE.MathUtils.lerp(rotationVelocity.z, -deltaAngle * 1.5, 0.3);
+                previousRollAngle = currentAngle;
+            } else if (currentStableMode === 'rotate') {
+                const rawFingerX = landmarks[8].x;
+                const rawFingerY = landmarks[8].y;
+                if (!isTrackingRotation) {
+                    smoothedFingerPos = { x: rawFingerX, y: rawFingerY };
+                    previousFingerPos = { x: rawFingerX, y: rawFingerY };
+                    isTrackingRotation = true;
+                }
+                smoothedFingerPos.x = THREE.MathUtils.lerp(smoothedFingerPos.x, rawFingerX, 0.2);
+                smoothedFingerPos.y = THREE.MathUtils.lerp(smoothedFingerPos.y, rawFingerY, 0.2);
+                const deltaX = smoothedFingerPos.x - previousFingerPos.x;
+                const deltaY = smoothedFingerPos.y - previousFingerPos.y;
+                if (Math.abs(deltaX) > 0.005 || Math.abs(deltaY) > 0.005) {
+                    const sensitivity = 3.5;
+                    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                        rotationVelocity.y -= deltaX * sensitivity;
+                    } else {
+                        rotationVelocity.x += deltaY * sensitivity;
+                    }
+                }
+                previousFingerPos = { x: smoothedFingerPos.x, y: smoothedFingerPos.y };
+            } else {
+                isTrackingRotation = false;
+                isTrackingRoll = false;
+                const tips = [4, 8, 12, 16, 20];
+                let totalDist = 0;
+                tips.forEach(i => totalDist += getDist(i, 0));
+                const avgDist = totalDist / 5;
+                handInfluence = THREE.MathUtils.lerp(handInfluence, Math.max(0, Math.min(1, (avgDist - 0.08) / 0.32)), 0.2);
+            }
+
+            // 扇巴掌：检测开放手掌的快速水平挥动来切换图案
+            const palm = {
+                x: (landmarks[0].x + landmarks[5].x + landmarks[9].x + landmarks[13].x + landmarks[17].x) / 5,
+                y: (landmarks[0].y + landmarks[5].y + landmarks[9].y + landmarks[13].y + landmarks[17].y) / 5
+            };
+            const dxPalm = palm.x - previousPalmPos.x;
+            const dyPalm = palm.y - previousPalmPos.y;
+            const speed = Math.sqrt(dxPalm * dxPalm + dyPalm * dyPalm);
+            const horizontalDominant = Math.abs(dxPalm) > Math.abs(dyPalm) * 1.6;
+            const cooldownOk = (now - lastSlapTime) > 700;
+            if (openPalm && horizontalDominant && speed > 0.08 && cooldownOk) {
+                lastSlapTime = now;
+                cycleShapeNext();
+            }
+            previousPalmPos = palm;
+        }
+
+        async function startHandTracking() {
+            if (!hands || !video) {
+                setTimeout(startHandTracking, 100);
+                return;
+            }
+            const camera = new Camera(video, {
+                onFrame: async () => { await hands.send({ image: video }); },
+                width: CONFIG.VIDEO_WIDTH,
+                height: CONFIG.VIDEO_HEIGHT
+            });
+            await camera.start();
+        }
+
+        // ==================== 模式切换 ====================
+        window.switchMode = async function() {
+            if (currentMode === 'face') {
+                currentMode = 'hand';
+                if (emotionOrb) {
+                    emotionOrb.visible = false;
+                    scene.remove(emotionOrb);
+                }
+                if (video) video.style.display = 'none';
+                
+                if (!particles) createParticles();
+                particles.visible = true;
+
+                document.getElementById('mode-title').textContent = 'Particle Flow';
+                document.getElementById('toggle-text').textContent = '➜ Switch to Emotion Orb';
+                document.getElementById('particle-controls').classList.remove('hidden');
+                document.getElementById('gesture-modes').classList.remove('hidden');
+
+                startHandTracking();
+            } else {
+                currentMode = 'face';
+                if (particles) particles.visible = false;
+                if (emotionOrb) {
+                    emotionOrb.visible = true;
+                    if (!scene.children.includes(emotionOrb)) {
+                        scene.add(emotionOrb);
+                    }
+                }
+                if (video) video.style.display = 'block';
+
+                document.getElementById('mode-title').textContent = 'Emotion Orb';
+                document.getElementById('toggle-text').textContent = '➜ Switch to Particle Mode';
+                document.getElementById('particle-controls').classList.add('hidden');
+                document.getElementById('gesture-modes').classList.add('hidden');
+
+                detectFace();
+            }
+        };
+
+        window.changeShape = (shape) => {
+            currentShape = shape;
+            if (!particles) return;
+            generateShapePositions(shape, targetPositions);
+            generateShapeColors(shape, targetColors);
+            const buttons = document.querySelectorAll('[data-shape]');
+            buttons.forEach(b => b.classList.remove('active'));
+            const btn = document.querySelector(`[data-shape="${shape}"]`);
+            if (btn) btn.classList.add('active');
+            // 刷新后让图案重新正对相机
+            faceCameraAndReset();
+        };
+
+        function cycleShapeNext() {
+            const idx = SHAPES_ORDER.indexOf(currentShape);
+            const next = SHAPES_ORDER[(idx + 1) % SHAPES_ORDER.length];
+            window.changeShape(next);
+        }
+
+        function faceCameraAndReset() {
+            if (!particles || !camera) return;
+            rotationVelocity.x = 0;
+            rotationVelocity.y = 0;
+            rotationVelocity.z = 0;
+            particles.setRotationFromEuler(new THREE.Euler(0, 0, 0));
+            particles.lookAt(camera.position);
+        }
+
+        window.updateColor = (hex) => {
+            userBaseColor.set(hex);
+            if (particles && currentShape !== 'saturn') {
+                particles.material.color.set(hex);
+                // Update target colors to apply the new color to all particles
+                const color = new THREE.Color(hex);
+                for (let i = 0; i < CONFIG.PARTICLE_COUNT; i++) {
+                    const brightness = 0.2 + Math.random() * 0.8;
+                    targetColors[i * 3] = color.r * brightness;
+                    targetColors[i * 3 + 1] = color.g * brightness;
+                    targetColors[i * 3 + 2] = color.b * brightness;
+                }
+            }
+        };
+
+        window.toggleFullScreen = () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else if (document.exitFullscreen) {
+                document.exitFullscreen();
+            }
+        };
+
+        function updateStatus(status, color) {
+            const statusDot = document.getElementById('status-dot');
+            const statusText = document.getElementById('status-text');
+            const colorMap = { red: 'bg-red-500', yellow: 'bg-yellow-500', cyan: 'bg-cyan-400', green: 'bg-green-500' };
+            statusDot.className = `w-2 h-2 rounded-full ${colorMap[color] || 'bg-red-500'} transition-all duration-500`;
+            statusText.textContent = status.replace('_', ' ');
+        }
+
+        function hideLoader() {
+            const loader = document.getElementById('loader-overlay');
+            loader.style.opacity = '0';
+            setTimeout(() => loader.style.display = 'none', 700);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            composer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // ==================== 渲染循环 ====================
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = clock.getElapsedTime();
+
+            if (currentMode === 'face') {
+                emotionOrb.material.uniforms.uTime.value = time;
+                emotionOrb.rotation.x += 0.0005;
+                emotionOrb.rotation.y += 0.001;
+                renderer.render(scene, camera);
+                return;
+            } else if (particles) {
+                const positions = particles.geometry.attributes.position.array;
+                const colors = particles.geometry.attributes.color.array;
+
+                let scaleBase = 1 + Math.sin(time * 1.5) * 0.05;
+                let particleSize = CONFIG.PARTICLE_SIZE * (1 + Math.sin(time * 1.5) * 0.15);
+                let turbulence = 0.05;
+
+                if (isHandDetected) {
+                    scaleBase = 0.2 + handInfluence * 2.3;
+                    particleSize = CONFIG.PARTICLE_SIZE * (0.8 + handInfluence * 2.5);
+                    turbulence = 0.02 + handInfluence * 0.3;
+                }
+
+                particles.material.size = THREE.MathUtils.lerp(particles.material.size, particleSize, 0.1);
+
+                const camRight = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion).normalize();
+                const camUp = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion).normalize();
+                const camForward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion).normalize();
+
+                particles.rotateOnWorldAxis(camUp, rotationVelocity.y);
+                particles.rotateOnWorldAxis(camRight, rotationVelocity.x);
+                particles.rotateOnWorldAxis(camForward, rotationVelocity.z);
+
+                rotationVelocity.x = THREE.MathUtils.clamp(rotationVelocity.x, -0.06, 0.06);
+                rotationVelocity.y = THREE.MathUtils.clamp(rotationVelocity.y, -0.06, 0.06);
+                rotationVelocity.z = THREE.MathUtils.clamp(rotationVelocity.z, -0.035, 0.035);
+
+                rotationVelocity.x *= 0.92;
+                rotationVelocity.y *= 0.92;
+                rotationVelocity.z *= 0.96;
+
+                for (let i = 0; i < CONFIG.PARTICLE_COUNT; i++) {
+                    const idx = i * 3;
+                    let tx = targetPositions[idx];
+                    let ty = targetPositions[idx + 1];
+                    let tz = targetPositions[idx + 2];
+
+                    const dist = Math.sqrt(tx * tx + ty * ty + tz * tz);
+                    const normalizedDist = Math.min(dist / 20.0, 1.0);
+                    let expansionBoost = 1.0;
+                    if (isHandDetected) {
+                        expansionBoost = 1.0 + (handInfluence * Math.pow(normalizedDist, 1.5) * 2.0);
+                    }
+                    const finalScale = scaleBase * expansionBoost;
+                    tx *= finalScale;
+                    ty *= finalScale;
+                    tz *= finalScale;
+
+                    if (currentShape === 'galaxy') {
+                        const angle = time * (0.1 + (1.0 - (Math.sqrt(tx*tx+tz*tz)/20)) * 0.5);
+                        const cos = Math.cos(angle);
+                        const sin = Math.sin(angle);
+                        const rx = tx * cos - tz * sin;
+                        const rz = tx * sin + tz * cos;
+                        tx = rx;
+                        tz = rz;
+                    } else if (currentShape === 'lotus') {
+                        ty += Math.sin(time + tx) * 0.5;
+                    } else if (currentShape === 'torus') {
+                        // 圆环整体旋转与轻微波动
+                        const ang = time * 0.4;
+                        const cos = Math.cos(ang);
+                        const sin = Math.sin(ang);
+                        const rx = tx * cos - tz * sin;
+                        const rz = tx * sin + tz * cos;
+                        tx = rx; tz = rz;
+                        ty += Math.sin(time * 2 + i * 0.02) * 0.15;
+                    } else if (currentShape === 'doublehelix') {
+                        // 螺旋沿高度振荡
+                        ty += Math.sin(time * 2 + tx * 0.5 + tz * 0.5) * 0.4;
+                        const ang = time * 0.2;
+                        const cos = Math.cos(ang), sin = Math.sin(ang);
+                        const rx = tx * cos - tz * sin;
+                        const rz = tx * sin + tz * cos;
+                        tx = rx; tz = rz;
+                    } else if (currentShape === 'tornado') {
+                        // 半径随高度的旋转加速
+                        const rad = Math.sqrt(tx * tx + tz * tz);
+                        const speed = 0.05 + rad * 0.01;
+                        const ang = time * speed * 12.0;
+                        const cos = Math.cos(ang), sin = Math.sin(ang);
+                        const rx = tx * cos - tz * sin;
+                        const rz = tx * sin + tz * cos;
+                        tx = rx; tz = rz;
+                        ty += Math.sin(time * 1.5 + rad) * 0.2;
+                    } else if (currentShape === 'cube') {
+                        // 立方体边缘微抖动
+                        tx += Math.sin(time * 3 + i) * 0.03;
+                        ty += Math.cos(time * 2.7 + i) * 0.03;
+                        tz += Math.sin(time * 2.2 + i) * 0.03;
+                    } else if (currentShape === 'butterfly') {
+                        // 轻微拍翅效果
+                        const flap = 1.0 + Math.sin(time * 2.2) * 0.12;
+                        tx *= flap;
+                        tz *= flap * 0.8;
+                        ty += Math.sin(time * 1.8 + i * 0.01) * 0.2;
+                    } else if (currentShape === 'peachblossom') {
+                        // 桃花开合：外圈瓣开合更明显，中心与萼片影响较小
+                        const radial = Math.sqrt(tx * tx + tz * tz);
+                        const outerFactor = Math.min(radial / 10.0, 1.0);
+                        const open = 1.0 + Math.sin(time * 1.6) * (0.08 + 0.12 * outerFactor);
+                        tx *= open;
+                        tz *= open;
+                        ty += Math.sin(time * 1.2 + i * 0.02) * 0.08 * (0.5 + outerFactor);
+                    } else if (currentShape === 'jellyfish') {
+                        // 整体缓慢上下浮动
+                        ty += Math.sin(time * 0.6) * 2;
+                        
+                        // 伞体脉动参数（所有部分共享）- 减小脉动幅度
+                        const pulse = Math.sin(time * 1.8) * 0.2;
+                        
+                        // 伞状身体的脉动收缩 - 减小收缩幅度
+                        if (i < CONFIG.PARTICLE_COUNT * 0.25) {
+                            const radialDist = Math.sqrt(tx*tx + tz*tz);
+                            const pulseFactor = (1 + pulse * (radialDist / 10));
+                            tx *= pulseFactor;
+                            tz *= pulseFactor;
+                            ty += pulse * 0.5;
+                        } else {
+                            // 触手的复杂波动
+                            const tentacleLength = Math.abs(ty - 2) / 20;
+                            
+                            // 触手根部受伞体脉动影响（渐变过渡）
+                            const bodyInfluence = Math.max(0, 1 - tentacleLength * 2);
+                            const radialDist = Math.sqrt(tx*tx + tz*tz);
+                            const pulseFactor = (1 + pulse * bodyInfluence * 0.3);
+                            tx *= pulseFactor;
+                            tz *= pulseFactor;
+                            ty += pulse * bodyInfluence * 0.8;
+                            
+                            // 触手自身的波动
+                            const wavePhase = time * 2.5 + i * 0.08;
+                            const lateralWave = Math.sin(wavePhase + tentacleLength * Math.PI * 2) * (0.8 + tentacleLength * 1.2);
+                            const spiralWave = Math.cos(wavePhase * 1.3 + tentacleLength * Math.PI) * 0.6;
+                            
+                            // 触手末端摆动更大
+                            const swayAmount = Math.pow(tentacleLength, 1.5);
+                            tx += lateralWave * swayAmount;
+                            tz += spiralWave * swayAmount;
+                            
+                            // 触手垂直方向的波动
+                            ty += Math.sin(time * 3 + i * 0.1) * (0.4 + swayAmount * 0.8);
+                        }
+                    } else {
+                        tx += Math.sin(time * 2 + i) * turbulence;
+                        ty += Math.cos(time * 3 + i) * turbulence;
+                        tz += Math.sin(time * 4 + i) * turbulence;
+                    }
+
+                    positions[idx] += (tx - positions[idx]) * 0.06;
+                    positions[idx + 1] += (ty - positions[idx + 1]) * 0.06;
+                    positions[idx + 2] += (tz - positions[idx + 2]) * 0.06;
+
+                    if (targetColors.length > 0) {
+                        colors[idx] += (targetColors[idx] - colors[idx]) * 0.03;
+                        colors[idx + 1] += (targetColors[idx + 1] - colors[idx + 1]) * 0.03;
+                        colors[idx + 2] += (targetColors[idx + 2] - colors[idx + 2]) * 0.03;
+                    }
+
+                    if (Math.random() > 0.9995) {
+                        colors[idx] = 2.0;
+                        colors[idx + 1] = 2.0;
+                        colors[idx + 2] = 2.0;
+                    }
+                    if (colors[idx] > 1.5) {
+                        colors[idx] *= 0.9;
+                        colors[idx + 1] *= 0.9;
+                        colors[idx + 2] *= 0.9;
+                    }
+                }
+
+                particles.geometry.attributes.position.needsUpdate = true;
+                particles.geometry.attributes.color.needsUpdate = true;
+
+                controls.autoRotate = !isHandDetected;
+                controls.autoRotateSpeed = isHandDetected ? 0 : 1.0;
+                controls.update();
+            }
+
+            composer.render();
+        }
+
+        init();
+    </script>
+</body>
+</html>
